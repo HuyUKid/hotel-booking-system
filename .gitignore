@@ -1,0 +1,24 @@
+# hotel-booking/.gitignore
+
+# Backend
+venv/
+**/venv/
+__pycache__/
+*.py[cod]
+db.sqlite3
+*.sqlite3
+backend/.env
+.env
+
+# Frontend
+node_modules/
+**/node_modules/
+dist/
+build/
+.env.local
+
+# Chung & Trình soạn thảo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
