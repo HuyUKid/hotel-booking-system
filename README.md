@@ -1,4 +1,4 @@
-# Hotel Booking System (Monorepo)
+# Hotel Booking System
 
 Hệ thống quản lý và đặt phòng khách sạn.
 
