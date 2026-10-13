@@ -1,7 +1,8 @@
-# Hướng dẫn Frontend tích hợp API xác thực
+# Hướng dẫn Frontend xây dựng phần đăng nhập
 
-Thư mục này không chứa giao diện mẫu. Thành viên frontend tự chọn HTML/CSS/JS,
-React, Vue hoặc công nghệ khác và tích hợp với backend theo tài liệu này.
+Phần frontend chưa được triển khai. Thành viên frontend dùng tài liệu này để tự
+xây dựng giao diện đăng nhập, đổi mật khẩu và tích hợp với Django API. Có thể dùng
+HTML/CSS/JavaScript thuần, React hoặc Vue; API không phụ thuộc framework.
 
 Backend phát triển mặc định tại:
 
@@ -17,6 +18,18 @@ http://127.0.0.1:5501
 ```
 
 Không trộn `localhost` với `127.0.0.1`, vì cookie phiên có thể không được gửi.
+
+## Sản phẩm Frontend cần bàn giao
+
+- Trang đăng nhập có trạng thái đang gửi và vùng hiển thị lỗi.
+- Trang đổi mật khẩu bắt buộc.
+- Trang chính tạm thời để chứng minh phiên đăng nhập hoạt động.
+- Nút đăng xuất.
+- Một module gọi API dùng chung, luôn gửi session cookie và CSRF token đúng cách.
+- Cơ chế bảo vệ trang riêng tư bằng `GET /api/session/`.
+
+Không lưu mật khẩu, CSRF token hoặc trạng thái “đã đăng nhập” vào mã nguồn.
+Session do backend xác nhận mới là nguồn dữ liệu chính xác.
 
 ## Các màn hình Frontend cần làm
 
@@ -134,4 +147,16 @@ if (!response.ok) {
 - Kết quả thử đủ bốn luồng: đăng nhập đúng, đăng nhập sai, đổi mật khẩu, đăng xuất.
 - Log Network của trình duyệt nếu gặp lỗi tích hợp: URL, method, status và response.
 
-Chi tiết request/response chính thức nằm tại `docs/api_contract.md`.
+## Tiêu chí hoàn thành
+
+- Đăng nhập đúng và chuyển trang theo `must_change_password`.
+- Đăng nhập sai hiển thị thông báo từ backend, không tải lại cả trang.
+- Tải lại trang vẫn nhận ra session hiện tại.
+- Người chưa đăng nhập không vào được trang riêng tư.
+- Đổi mật khẩu thành công và vẫn giữ phiên đăng nhập.
+- Đăng xuất xong không truy cập lại được trang riêng tư.
+- Giao diện khóa nút trong lúc gửi và không gửi trùng request.
+
+Chi tiết request/response chính thức nằm tại
+[`api_contract.md`](../docs/api_contract.md). Cách chạy hai phía nằm tại
+[`huong_dan_chay_du_an.md`](../docs/huong_dan_chay_du_an.md).

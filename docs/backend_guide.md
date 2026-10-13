@@ -1,85 +1,84 @@
-# Hướng dẫn Backend — module xác thực
+# Hướng dẫn làm việc cho Backend
 
-## Backend hiện phải chịu trách nhiệm gì?
+Tài liệu này hướng dẫn quy trình phát triển và bàn giao của thành viên Backend.
+Phần giải thích chi tiết cấu trúc module xác thực nằm trong
+[`backend/README.md`](../backend/README.md); request và response dùng để phối hợp
+với Frontend nằm trong [`api_contract.md`](api_contract.md).
 
-- Quản lý tài khoản bằng `django.contrib.auth`.
-- Lưu cờ bắt buộc đổi mật khẩu trong `EmployeeProfile`.
-- Xác thực mật khẩu và tạo/xóa session.
-- Cấp, kiểm tra CSRF token cho frontend độc lập.
-- Cho phép đúng frontend origin bằng CORS.
-- Trả JSON và HTTP status thống nhất theo `api_contract.md`.
-- Kiểm thử cả luồng thành công và thất bại.
+## 1. Phạm vi hiện tại
 
-Frontend chỉ thu thập dữ liệu và hiển thị kết quả. Backend phải kiểm tra lại mọi
-request; không tin validation phía trình duyệt.
+Backend được chia thành hai Django app:
 
-## Các file quan trọng
+- `authentication`: đăng nhập, đăng xuất, session, CSRF và đổi mật khẩu.
+- `booking`: nghiệp vụ phòng và đặt phòng sau khi xác thực.
 
-| File | Trách nhiệm |
-| --- | --- |
-| `booking/models.py` | `EmployeeProfile.must_change_password` |
-| `booking/views.py` | CSRF, session, login, logout, đổi mật khẩu |
-| `booking/urls.py` | URL `/api/...` |
-| `booking/tests.py` | Kiểm thử API xác thực |
-| `config/settings.py` | CORS, CSRF, session và cấu hình Django |
-| `docs/api_contract.md` | Giao kèo chính thức với frontend |
+Không đặt model hoặc API đặt phòng vào `authentication`. Các API xác thực dùng
+prefix `/api/`; các API nghiệp vụ mới dùng prefix `/api/booking/`.
 
-## Công việc Backend cần làm trước khi bàn giao
+## 2. Quy trình phát triển một chức năng
 
-1. Chốt origin mà frontend sử dụng và cập nhật `CORS_ALLOWED_ORIGINS` cùng
-   `CSRF_TRUSTED_ORIGINS`.
-2. Chạy migration và tạo tài khoản thử.
-3. Tạo `EmployeeProfile` cho tài khoản nhân viên; đặt
-   `must_change_password=True` nếu muốn buộc đổi mật khẩu lần đầu.
-4. Chạy test và gửi API contract cho frontend.
-5. Không đổi URL, tên trường hoặc kiểu dữ liệu mà chưa báo frontend.
+1. Đọc yêu cầu nghiệp vụ và xác định người dùng, dữ liệu đầu vào, kết quả đầu ra.
+2. Thống nhất với Frontend URL, HTTP method, request, response và mã lỗi.
+3. Cập nhật [`api_contract.md`](api_contract.md) trước khi hai bên viết code.
+4. Thiết kế hoặc sửa model trong đúng Django app.
+5. Tạo migration nếu schema thay đổi; không sửa migration đã được dùng chung.
+6. Viết view, URL và kiểm tra quyền ở Backend.
+7. Viết test cho luồng thành công, dữ liệu sai, chưa đăng nhập và thiếu quyền.
+8. Chạy kiểm tra, chuẩn bị dữ liệu mẫu rồi bàn giao endpoint cho Frontend.
 
-Tạo tài khoản bằng Django Admin hoặc shell. Ví dụ trong shell:
+## 3. Quy tắc API
+
+- Nhận và trả dữ liệu JSON, trừ endpoint không cần body.
+- Trả cấu trúc lỗi thống nhất gồm `status` và `message`.
+- Dùng đúng HTTP status: `400` cho dữ liệu sai, `401` cho chưa xác thực, `403`
+  cho không đủ quyền và `405` cho sai method.
+- Backend luôn kiểm tra lại dữ liệu; không phụ thuộc validation ở trình duyệt.
+- Không trả mật khẩu, password hash, session key hoặc stack trace cho Frontend.
+- Không đổi URL hoặc tên trường đã thống nhất mà chưa cập nhật API contract.
+
+## 4. Tài khoản dùng để tích hợp
+
+Sau khi chạy migration, tạo tài khoản thử trong Django Admin hoặc shell:
+
+```powershell
+cd backend
+.\venv\Scripts\python.exe manage.py shell
+```
 
 ```python
 from django.contrib.auth.models import User
-from booking.models import EmployeeProfile
+from authentication.models import EmployeeProfile
 
-user = User.objects.create_user(
-    username='nv01',
-    password='InitialPassword@123',
-    first_name='Văn A',
-    last_name='Nguyễn',
-)
+user = User.objects.create_user(username='nv01', password='mat-khau-ban-dau')
 EmployeeProfile.objects.create(user=user, must_change_password=True)
 ```
 
-## Khi Frontend báo lỗi tích hợp
+Chỉ gửi tài khoản thử qua kênh làm việc của nhóm. Không commit mật khẩu thật hoặc
+dữ liệu bí mật vào repository.
 
-Yêu cầu frontend cung cấp URL, method, request body, HTTP status và response. Sau đó
-kiểm tra theo thứ tự:
+## 5. Phối hợp với Frontend
 
-1. Backend có chạy đúng `127.0.0.1:8000` không.
-2. Frontend origin có nằm trong CORS/CSRF settings không.
-3. Request có `credentials: "include"` không.
-4. POST có `X-CSRFToken` không.
-5. Session cookie có xuất hiện trong Network/Application của trình duyệt không.
-6. Request body có đúng contract không.
+Backend cần bàn giao:
 
-Không tắt CSRF hoặc mở `CORS_ALLOW_ALL_ORIGINS` để sửa tạm lỗi tích hợp.
+- Base URL và origin Frontend đã được cấu hình CORS/CSRF.
+- Endpoint, method, request, response và các HTTP status có thể xuất hiện.
+- Tài khoản cùng dữ liệu mẫu để kiểm thử.
+- Thay đổi API contract và migration mới nếu có.
 
-## Kiểm tra trước khi push
+Khi Frontend báo lỗi, yêu cầu cung cấp URL, method, request body, HTTP status và
+response trong Network. Kiểm tra lần lượt backend đang chạy, origin được cho phép,
+`credentials: "include"`, `X-CSRFToken` cho POST và session cookie.
+
+## 6. Kiểm tra trước khi commit
 
 ```powershell
 cd backend
 .\venv\Scripts\python.exe manage.py check
 .\venv\Scripts\python.exe manage.py makemigrations --check --dry-run
-.\venv\Scripts\python.exe manage.py test booking
+.\venv\Scripts\python.exe manage.py test
 ```
 
-Module đủ điều kiện bàn giao khi các lệnh trên thành công, migration chạy được từ
-database mới và frontend đăng nhập/đổi mật khẩu/đăng xuất được theo contract.
-
-## Việc nên làm tiếp theo ở Backend
-
-- Đưa `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` và frontend origins sang biến môi trường.
-- Thêm giới hạn số lần đăng nhập sai nếu triển khai thực tế.
-- Quy định ai tạo tài khoản nhân viên và tự động tạo `EmployeeProfile` trong luồng đó.
-- Thiết lập HTTPS, cookie secure và thời hạn session cho môi trường production.
-- Chỉ bắt đầu nghiệp vụ đặt phòng sau khi nhóm chốt model và API contract riêng.
+Chỉ bàn giao khi migration chạy được, test đạt và hành vi thực tế khớp với API
+contract. Với công việc tiếp theo, làm theo phân chia Backend/Frontend trong
+[`next_steps_after_auth.md`](next_steps_after_auth.md).
 
