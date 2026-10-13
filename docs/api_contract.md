@@ -101,9 +101,9 @@ Response 200:
 }
 ```
 
-Backend áp dụng các password validator của Django, đặt
-`must_change_password = false` và giữ nguyên phiên sau khi đổi. HTTP 400 nếu hai
-mật khẩu không khớp hoặc mật khẩu không đạt yêu cầu; HTTP 401 nếu chưa đăng nhập.
+Backend không kiểm tra độ mạnh mật khẩu. Mật khẩu chỉ cần không rỗng và khớp với
+`confirm_password`. Khi thành công, backend đặt `must_change_password = false` và
+giữ nguyên phiên. HTTP 400 nếu dữ liệu không hợp lệ; HTTP 401 nếu chưa đăng nhập.
 
 ## 5. Đăng xuất
 

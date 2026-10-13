@@ -1,8 +1,6 @@
 import json
 
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -97,17 +95,14 @@ def api_change_password(request):
 
     new_password = str(data.get('new_password', ''))
     confirm_password = str(data.get('confirm_password', ''))
+    if not new_password:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Mật khẩu mới không được để trống.'},
+            status=400,
+        )
     if new_password != confirm_password:
         return JsonResponse(
             {'status': 'error', 'message': 'Mật khẩu xác nhận không khớp.'},
-            status=400,
-        )
-
-    try:
-        validate_password(new_password, request.user)
-    except ValidationError as exc:
-        return JsonResponse(
-            {'status': 'error', 'message': ' '.join(exc.messages)},
             status=400,
         )
 

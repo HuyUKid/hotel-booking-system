@@ -93,6 +93,29 @@ class AuthenticationApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_change_password_accepts_weak_non_empty_password(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('api_change_password'),
+            data=json.dumps({
+                'new_password': '1',
+                'confirm_password': '1',
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('1'))
+
+    def test_change_password_rejects_empty_password(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('api_change_password'),
+            data=json.dumps({'new_password': '', 'confirm_password': ''}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_logout_ends_session(self):
         self.client.force_login(self.user)
         response = self.client.post(reverse('api_logout'))

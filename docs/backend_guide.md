@@ -21,7 +21,7 @@ request; không tin validation phía trình duyệt.
 | `booking/views.py` | CSRF, session, login, logout, đổi mật khẩu |
 | `booking/urls.py` | URL `/api/...` |
 | `booking/tests.py` | Kiểm thử API xác thực |
-| `config/settings.py` | CORS, CSRF, session, password validators |
+| `config/settings.py` | CORS, CSRF, session và cấu hình Django |
 | `docs/api_contract.md` | Giao kèo chính thức với frontend |
 
 ## Công việc Backend cần làm trước khi bàn giao

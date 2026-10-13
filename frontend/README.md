@@ -43,7 +43,7 @@ Trường nhập:
 - `confirm_password`.
 
 Gửi `POST /api/change-password/`. Thành công thì chuyển đến trang chính. Nếu lỗi,
-hiển thị `message`; backend sẽ kiểm tra độ mạnh và hai mật khẩu có khớp hay không.
+hiển thị `message`; backend chỉ kiểm tra mật khẩu không rỗng và hai ô có khớp nhau.
 
 ### 3. Kiểm tra phiên khi mở trang riêng tư
 
