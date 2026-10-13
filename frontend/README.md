@@ -159,4 +159,6 @@ if (!response.ok) {
 
 Chi tiết request/response chính thức nằm tại
 [`api_contract.md`](../docs/api_contract.md). Cách chạy hai phía nằm tại
-[`huong_dan_chay_du_an.md`](../docs/huong_dan_chay_du_an.md).
+[`huong_dan_chay_du_an.md`](../docs/huong_dan_chay_du_an.md). Quy tắc tạo nhánh,
+commit và phối hợp mã nguồn nằm tại
+[`git_workflow.md`](../docs/git_workflow.md).

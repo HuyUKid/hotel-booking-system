@@ -187,6 +187,7 @@ contract thay đổi.
 - [`frontend/README.md`](../frontend/README.md): hướng dẫn frontend làm phần xác thực.
 - [`api_contract.md`](../docs/api_contract.md): request/response chính thức.
 - [`backend_guide.md`](../docs/backend_guide.md): quy trình phát triển và bàn giao Backend.
+- [`git_workflow.md`](../docs/git_workflow.md): quy tắc nhánh, commit và phối hợp Git.
 - [`huong_dan_chay_du_an.md`](../docs/huong_dan_chay_du_an.md): cách cài và chạy dự án.
 - [`next_steps_after_auth.md`](../docs/next_steps_after_auth.md): công việc sau xác thực.
 

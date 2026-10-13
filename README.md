@@ -31,6 +31,7 @@ frontend/README.md   # Hướng dẫn frontend tự xây dựng phần đăng nh
 docs/
 ├── api_contract.md
 ├── backend_guide.md
+├── git_workflow.md
 ├── huong_dan_chay_du_an.md
 ├── next_steps_after_auth.md
 └── reference/
@@ -50,6 +51,7 @@ python -m venv venv
 Xem [hướng dẫn chạy](docs/huong_dan_chay_du_an.md),
 [API contract](docs/api_contract.md), [README Backend](backend/README.md),
 [hướng dẫn làm việc Backend](docs/backend_guide.md),
+[quy tắc làm việc với Git](docs/git_workflow.md),
 [README Frontend](frontend/README.md) và
 [lộ trình sau xác thực](docs/next_steps_after_auth.md).
 
