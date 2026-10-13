@@ -14,6 +14,13 @@ thành viên frontend phát triển độc lập dựa trên API contract.
 
 Chưa bao gồm nghiệp vụ phòng hoặc đặt phòng.
 
+## Tài liệu nghiệp vụ
+
+- [Quy trình đặt phòng](docs/reference/quy-trinh-dat-phong.pdf): bản tài liệu
+  nghiệp vụ dùng cho dự án, đã bỏ trang bìa đầu tiên.
+- [Lộ trình triển khai sau xác thực](docs/next_steps_after_auth.md): phân chia
+  công việc cụ thể giữa Backend và Frontend.
+
 ## Cấu trúc
 
 ```text
@@ -25,7 +32,9 @@ docs/
 ├── api_contract.md
 ├── backend_guide.md
 ├── huong_dan_chay_du_an.md
-└── next_steps_after_auth.md
+├── next_steps_after_auth.md
+└── reference/
+    └── quy-trinh-dat-phong.pdf
 ```
 
 ## Chạy backend

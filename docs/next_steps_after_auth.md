@@ -1,5 +1,9 @@
 # Lộ trình sau khi hoàn thành đăng nhập và mật khẩu
 
+Lộ trình này được xây dựng dựa trên
+[tài liệu quy trình đặt phòng](reference/quy-trinh-dat-phong.pdf). File PDF trong
+repository là bản đã bỏ trang bìa đầu tiên của tài liệu nguồn.
+
 Tài liệu này chia rõ công việc Backend và Frontend sau khi module xác thực hoàn
 thành. Hai bên không chờ nhau viết xong toàn bộ; mỗi bước bắt đầu bằng việc chốt
 API contract, sau đó làm song song và tích hợp.
