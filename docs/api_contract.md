@@ -1,14 +1,124 @@
-# API Contract - Xác thực nhân viên
+# API Contract — Xác thực nhân viên
 
-### 1. Đăng nhập
-- **Endpoint:** `POST /api/login/`
-- **Body:** `{"username": "nv01", "password": "initial_password"}`
-- **Response:**
-  - `status`: "success" | "error"
-  - `must_change_password`: true | false
+Base URL phát triển: `http://127.0.0.1:8000`.
 
-### 2. Đổi mật khẩu
-- **Endpoint:** `POST /api/change-password/`
-- **Body:** `{"new_password": "NewSecretPassword@123"}`
-- **Response:**
-  - `status`: "success" | "error"
+Frontend gửi mọi request với `credentials: "include"`. Các request POST phải có
+header `X-CSRFToken` lấy từ endpoint CSRF.
+
+## Response lỗi chung
+
+```json
+{
+  "status": "error",
+  "message": "Nội dung lỗi có thể hiển thị cho người dùng."
+}
+```
+
+## 1. Lấy CSRF token
+
+```http
+GET /api/csrf/
+```
+
+Response 200:
+
+```json
+{
+  "status": "success",
+  "csrf_token": "token-value"
+}
+```
+
+## 2. Đăng nhập
+
+```http
+POST /api/login/
+Content-Type: application/json
+X-CSRFToken: token-value
+```
+
+Request:
+
+```json
+{
+  "username": "nv01",
+  "password": "initial_password"
+}
+```
+
+Response 200:
+
+```json
+{
+  "status": "success",
+  "username": "Nguyễn Văn A",
+  "must_change_password": true
+}
+```
+
+Lỗi: HTTP 400 nếu thiếu dữ liệu; HTTP 401 nếu thông tin đăng nhập không đúng.
+
+## 3. Kiểm tra phiên
+
+```http
+GET /api/session/
+```
+
+Response 200 giống phần thông tin người dùng của đăng nhập:
+
+```json
+{
+  "status": "success",
+  "username": "Nguyễn Văn A",
+  "must_change_password": false
+}
+```
+
+HTTP 401 nếu chưa đăng nhập hoặc phiên hết hạn.
+
+## 4. Đổi mật khẩu
+
+```http
+POST /api/change-password/
+Content-Type: application/json
+X-CSRFToken: token-value
+```
+
+Request:
+
+```json
+{
+  "new_password": "NewSecretPassword@123",
+  "confirm_password": "NewSecretPassword@123"
+}
+```
+
+Response 200:
+
+```json
+{
+  "status": "success"
+}
+```
+
+Backend áp dụng các password validator của Django, đặt
+`must_change_password = false` và giữ nguyên phiên sau khi đổi. HTTP 400 nếu hai
+mật khẩu không khớp hoặc mật khẩu không đạt yêu cầu; HTTP 401 nếu chưa đăng nhập.
+
+## 5. Đăng xuất
+
+```http
+POST /api/logout/
+X-CSRFToken: token-value
+```
+
+Response 200:
+
+```json
+{
+  "status": "success",
+  "message": "Đã đăng xuất"
+}
+```
+
+HTTP 401 nếu phiên không hợp lệ. Sau thành công, frontend chuyển về trang đăng nhập.
