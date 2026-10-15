@@ -1,33 +1,160 @@
-<!-- index.html (Trang chính nội bộ) -->
-<div id="app" style="display: none;">
-    <h2>Xin chào nhân viên: <span id="employeeName"></span></h2>
-    <button id="logoutBtn">Đăng xuất</button>
-    <!-- Các chức năng nghiệp vụ đặt phòng để ở đây -->
-</div>
-<script src="api.js"></script>
-<script>
-// 1. KIỂM TRA PHIÊN KHI MỞ TRANG
-async function checkSession() {
-    const { response, data } = await apiRequest('/api/session/');
-    
-    if (response.status === 401) {
-        window.location.href = '/login.html'; // Chưa đăng nhập -> Đuổi về login
-    } else if (data.must_change_password) {
-        window.location.href = '/change-password.html'; // Bắt buộc đổi MK
-    } else {
-        // Hợp lệ -> Hiển thị giao diện và tên nhân viên
-        document.getElementById('employeeName').innerText = data.username;
-        document.getElementById('app').style.display = 'block';
-    }
-}
-checkSession();
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Quản lý Đặt phòng</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app" class="dashboard" style="display: none;">
+        <!-- Cột Menu Bên Trái -->
+        <div class="sidebar">
+            <h3>Hotel Booking</h3>
+            <!-- Các menu sẽ được JS hiển thị tùy vào role -->
+            <a href="#" id="menu-check-room" class="menu-item active">Kiểm tra phòng trống</a>
+            <a href="#" id="menu-booking-list" class="menu-item">Quản lý phiếu đặt</a>
+            <a href="#" id="menu-reception" class="menu-item">Bàn giao Lễ tân</a>
+        </div>
 
-// 2. XỬ LÝ ĐĂNG XUẤT
-document.getElementById('logoutBtn').addEventListener('click', async (e) => {
-    const btn = e.target;
-    btn.disabled = true; // Khóa nút lúc gửi tránh click đúp
-    
-    await apiRequest('/api/logout/', { method: 'POST' });
-    window.location.href = '/login.html'; // Chuyển về trang đăng nhập
-});
-</script>
+        <!-- Cột Nội Dung Bên Phải -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div>Xin chào, <strong id="displayName"></strong> (<span id="userRole"></span>)</div>
+                <button id="logoutBtn">Đăng xuất</button>
+            </div>
+
+            <!-- Giao diện 1: Màn hình kiểm tra phòng trống (Theo yêu cầu mục 4) -->
+            <div id="view-check-room" class="container" style="max-width: 100%; margin: 0;">
+                <h2>Kiểm tra khả năng đáp ứng</h2>
+                <form id="checkRoomForm" style="display: flex; gap: 15px; align-items: flex-end;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Ngày đến:</label>
+                        <input type="date" id="checkInDate" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Ngày đi:</label>
+                        <input type="date" id="checkOutDate" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Loại phòng:</label>
+                        <select id="roomType" style="width: 100%; padding: 10px;">
+                            <option value="ALL">Tất cả</option>
+                            <option value="STD">Standard (Tiêu chuẩn)</option>
+                            <option value="VIP">VIP</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="checkBtn" style="flex: 1;">Kiểm tra</button>
+                </form>
+
+                <!-- Bảng hiển thị kết quả trả về từ Backend (Mock) -->
+                <div id="mockResult" style="display: none;">
+                    <h3>Kết quả phòng trống (Mock Data)</h3>
+                    <table class="result-table">
+                        <thead>
+                            <tr>
+                                <th>Loại phòng</th>
+                                <th>Tổng phòng</th>
+                                <th>Đang trống</th>
+                                <th>Giá/Đêm</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="api.js"></script>
+    <script>
+        // 1. KIỂM TRA PHIÊN VÀ PHÂN QUYỀN
+        async function initializeApp() {
+            const { response, data } = await apiRequest('/api/session/');
+            
+            if (response.status === 401 || data.code === 'AUTHENTICATION_REQUIRED') {
+                window.location.href = '/login.html';
+                return;
+            }
+            if (data.must_change_password) {
+                window.location.href = '/change-password.html';
+                return;
+            }
+
+            // Hiển thị giao diện chung
+            document.getElementById('app').style.display = 'flex';
+            document.getElementById('displayName').innerText = data.display_name || data.username;
+            
+            // Đọc Role (Giả định Backend trả về role là 'admin', 'receptionist', hoặc 'reservation')
+            const role = data.role || 'reservation'; 
+            document.getElementById('userRole').innerText = role;
+
+            // Hiển thị menu theo quyền (Authorization)
+            document.getElementById('menu-check-room').style.display = 'block';
+            document.getElementById('menu-booking-list').style.display = 'block';
+            
+            if (role === 'admin' || role === 'receptionist') {
+                document.getElementById('menu-reception').style.display = 'block';
+            }
+        }
+        initializeApp();
+
+        // 2. XỬ LÝ ĐĂNG XUẤT
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.target.disabled = true;
+            e.target.innerText = "Đang xuất...";
+            await apiRequest('/api/logout/', { method: 'POST' });
+            window.location.href = '/login.html';
+        });
+
+        // 3. MÔ PHỎNG (MOCK DATA) KIỂM TRA PHÒNG TRỐNG
+        // Nhóm yêu cầu: Gửi ngày, loại phòng tới API, hiển thị số phòng còn lại, không tự tính trên web
+        document.getElementById('checkRoomForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('checkBtn');
+            btn.disabled = true;
+            btn.innerText = "Đang tìm...";
+
+            // Giả lập thời gian chờ API (1 giây)
+            setTimeout(() => {
+                // Đây là dữ liệu JSON giả (Mock) thay vì gọi API thật chưa có
+                const mockApiResponse = {
+                    status: "success",
+                    available_rooms: [
+                        { type: "Standard", total: 50, available: 12, price: "500,000 VND" },
+                        { type: "VIP", total: 10, available: 0, price: "1,500,000 VND" } // Trả về 0 để test hết phòng
+                    ]
+                };
+
+                // Render HTML
+                const tbody = document.getElementById('resultBody');
+                tbody.innerHTML = '';
+                
+                mockApiResponse.available_rooms.forEach(room => {
+                    const actionBtn = room.available > 0 
+                        ? `<button style="background: #28a745; padding: 5px;">Đặt ngay</button>` 
+                        : `<button style="background: #ffc107; padding: 5px; color: black;">Đưa vào ds chờ</button>`; // Thao tác danh sách chờ
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${room.type}</td>
+                            <td>${room.total}</td>
+                            <td style="color: ${room.available > 0 ? 'green' : 'red'}; font-weight: bold;">
+                                ${room.available}
+                            </td>
+                            <td>${room.price}</td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById('mockResult').style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = "Kiểm tra";
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
