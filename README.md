@@ -1,7 +1,7 @@
 # Hotel Booking System
 
-Repository hiện chứa backend xác thực nhân viên bằng Django. Phần frontend do
-thành viên frontend phát triển độc lập dựa trên API contract.
+Repository hiện có Backend xác thực nhân viên bằng Django và bản Frontend
+HTML/JavaScript cơ bản. Hai phần phát triển độc lập và giao tiếp theo API contract.
 
 ## Phạm vi hiện tại
 
@@ -27,7 +27,12 @@ Chưa bao gồm nghiệp vụ phòng hoặc đặt phòng.
 backend/
 ├── authentication/  # API, model, migration và test xác thực
 └── booking/         # Nghiệp vụ đặt phòng sẽ phát triển tiếp
-frontend/README.md   # Hướng dẫn frontend tự xây dựng phần đăng nhập
+frontend/
+├── api.js
+├── login.html
+├── change-password.html
+├── index.html
+└── README.md         # Việc Frontend cần hoàn thiện để tích hợp Backend
 docs/
 ├── api_contract.md
 ├── backend_guide.md
@@ -61,5 +66,5 @@ Xem [hướng dẫn chạy](docs/huong_dan_chay_du_an.md),
 cd backend
 .\venv\Scripts\python.exe manage.py check
 .\venv\Scripts\python.exe manage.py makemigrations --check --dry-run
-.\venv\Scripts\python.exe manage.py test authentication
+.\venv\Scripts\python.exe manage.py test
 ```

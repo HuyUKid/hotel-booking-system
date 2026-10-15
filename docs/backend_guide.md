@@ -29,7 +29,7 @@ prefix `/api/`; các API nghiệp vụ mới dùng prefix `/api/booking/`.
 ## 3. Quy tắc API
 
 - Nhận và trả dữ liệu JSON, trừ endpoint không cần body.
-- Trả cấu trúc lỗi thống nhất gồm `status` và `message`.
+- Trả cấu trúc lỗi thống nhất gồm `status`, `code` và `message`.
 - Dùng đúng HTTP status: `400` cho dữ liệu sai, `401` cho chưa xác thực, `403`
   cho không đủ quyền và `405` cho sai method.
 - Backend luôn kiểm tra lại dữ liệu; không phụ thuộc validation ở trình duyệt.

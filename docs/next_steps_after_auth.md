@@ -24,12 +24,12 @@ API contract, sau đó làm song song và tích hợp.
 
 - Chạy đủ 5 API xác thực hiện có.
 - Cấu hình đúng frontend origin trong CORS và CSRF.
-- Tạo tài khoản nhân viên và `EmployeeProfile` dùng để tích hợp.
+- Tạo tài khoản nhân viên thử; Backend tự tạo `EmployeeProfile` dùng để tích hợp.
 - Gửi frontend base URL, tài khoản thử và `api_contract.md`.
 
 ### Frontend
 
-- Làm trang đăng nhập, đổi mật khẩu và nút đăng xuất.
+- Hoàn thiện trang đăng nhập, đổi mật khẩu và nút đăng xuất hiện có.
 - Gọi `/api/session/` trước khi hiển thị trang riêng tư.
 - Gửi cookie bằng `credentials: "include"` và CSRF token cho POST.
 - Xử lý HTTP 400, 401, 403 và trạng thái backend không kết nối được.

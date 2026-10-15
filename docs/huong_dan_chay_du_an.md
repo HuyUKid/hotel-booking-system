@@ -49,6 +49,7 @@ cd backend
 
 - Django Admin: `http://127.0.0.1:8000/admin/`
 - CSRF API: `http://127.0.0.1:8000/api/csrf/`
+
 Terminal 2 chạy Frontend:
 
 ```powershell

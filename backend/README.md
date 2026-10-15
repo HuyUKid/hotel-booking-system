@@ -32,6 +32,8 @@ backend/
 │   ├── models.py         # EmployeeProfile
 │   ├── views.py          # Xử lý API xác thực
 │   ├── urls.py           # Endpoint xác thực dưới /api/...
+│   ├── signals.py        # Tự tạo EmployeeProfile khi có User mới
+│   ├── middleware.py     # Bảo vệ các API /api/booking/
 │   ├── admin.py          # Quản lý EmployeeProfile trong Django Admin
 │   ├── tests.py          # Kiểm thử API xác thực
 │   └── migrations/       # Trạng thái schema của module xác thực
@@ -42,8 +44,9 @@ backend/
     └── tests.py          # Test nghiệp vụ đặt phòng
 ```
 
-`authentication` và `booking` là hai app Django độc lập. Sau khi đăng nhập thành
-công, frontend gọi các API trong `booking`; app xác thực không chứa nghiệp vụ phòng.
+`authentication` và `booking` là hai app Django độc lập. Khi API đặt phòng được
+phát triển, frontend sẽ gọi chúng dưới `/api/booking/`; app xác thực không chứa
+nghiệp vụ phòng.
 
 ## 3. Dữ liệu xác thực
 
@@ -176,7 +179,7 @@ Kiểm tra trước khi commit:
 ```powershell
 .\venv\Scripts\python.exe manage.py check
 .\venv\Scripts\python.exe manage.py makemigrations --check --dry-run
-.\venv\Scripts\python.exe manage.py test authentication
+.\venv\Scripts\python.exe manage.py test
 ```
 
 ## 11. Khi phối hợp với Frontend
@@ -185,9 +188,9 @@ Khi có lỗi tích hợp, kiểm tra URL, HTTP method, request body, status và
 trong Network của trình duyệt. Sau đó kiểm tra lần lượt origin CORS/CSRF,
 `credentials: "include"`, header `X-CSRFToken` cho POST và session cookie.
 
-Trước khi bàn giao, Backend cần chạy migration, tạo tài khoản có
-`EmployeeProfile`, chạy toàn bộ kiểm thử và thông báo cho Frontend nếu API
-contract thay đổi.
+Trước khi bàn giao, Backend cần chạy migration, tạo tài khoản nhân viên thử (profile
+được tạo tự động), chạy toàn bộ kiểm thử và thông báo cho Frontend nếu API contract
+thay đổi.
 
 ## 12. Tài liệu liên quan
 
