@@ -1,0 +1,33 @@
+<!-- index.html (Trang chính nội bộ) -->
+<div id="app" style="display: none;">
+    <h2>Xin chào nhân viên: <span id="employeeName"></span></h2>
+    <button id="logoutBtn">Đăng xuất</button>
+    <!-- Các chức năng nghiệp vụ đặt phòng để ở đây -->
+</div>
+<script src="api.js"></script>
+<script>
+// 1. KIỂM TRA PHIÊN KHI MỞ TRANG
+async function checkSession() {
+    const { response, data } = await apiRequest('/api/session/');
+    
+    if (response.status === 401) {
+        window.location.href = '/login.html'; // Chưa đăng nhập -> Đuổi về login
+    } else if (data.must_change_password) {
+        window.location.href = '/change-password.html'; // Bắt buộc đổi MK
+    } else {
+        // Hợp lệ -> Hiển thị giao diện và tên nhân viên
+        document.getElementById('employeeName').innerText = data.username;
+        document.getElementById('app').style.display = 'block';
+    }
+}
+checkSession();
+
+// 2. XỬ LÝ ĐĂNG XUẤT
+document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+    const btn = e.target;
+    btn.disabled = true; // Khóa nút lúc gửi tránh click đúp
+    
+    await apiRequest('/api/logout/', { method: 'POST' });
+    window.location.href = '/login.html'; // Chuyển về trang đăng nhập
+});
+</script>
