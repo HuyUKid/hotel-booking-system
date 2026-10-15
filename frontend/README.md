@@ -35,6 +35,10 @@ Mở login.html
 Frontend phải coi `GET /api/session/` là nguồn xác nhận trạng thái đăng nhập;
 không dùng `localStorage` để tự ghi rằng người dùng đã đăng nhập.
 
+Backend hiện đã hỗ trợ đầy đủ năm endpoint xác thực trong tài liệu. Middleware
+cũng đã bảo vệ prefix `/api/booking/`, nhưng các endpoint nghiệp vụ đặt phòng chưa
+được xây dựng; Frontend chưa nên giả định dữ liệu đặt phòng ngoài API contract.
+
 ## Những việc Frontend cần làm
 
 ### 1. Hoàn thiện `api.js`
@@ -70,6 +74,21 @@ không dùng `localStorage` để tự ghi rằng người dùng đã đăng nh�
 - `PASSWORD_CHANGE_REQUIRED` hoặc `must_change_password=true` chuyển tới trang
   đổi mật khẩu.
 - Khi đăng xuất thất bại, hiển thị lỗi và mở lại nút để người dùng thử lại.
+
+## Cách xử lý mã lỗi từ Backend
+
+| `data.code` | Frontend cần làm |
+| --- | --- |
+| `INVALID_CREDENTIALS` | Giữ form đăng nhập và hiển thị `message` |
+| `AUTHENTICATION_REQUIRED` | Chuyển tới `login.html`, trừ lần kiểm tra session ngay trên trang đăng nhập |
+| `PASSWORD_CHANGE_REQUIRED` | Chuyển tới `change-password.html` |
+| `PASSWORD_REQUIRED` | Hiển thị lỗi tại form đổi mật khẩu |
+| `PASSWORD_MISMATCH` | Hiển thị lỗi tại form đổi mật khẩu |
+| `CSRF_FAILED` | Lấy CSRF token mới; nếu vẫn lỗi thì báo người dùng tải lại trang |
+| `INVALID_JSON` hoặc `REQUIRED_FIELDS` | Hiển thị `message` tại form hiện tại |
+
+HTTP 401 từ lần gọi `/api/session/` khi mở `login.html` là trạng thái bình thường:
+người dùng chưa có phiên nên Frontend chỉ cần hiển thị form, không hiện cảnh báo.
 
 ### 5. Giao diện tối thiểu
 
