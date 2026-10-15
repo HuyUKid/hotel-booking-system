@@ -22,6 +22,20 @@ session cookie.
 Các endpoint nghiệp vụ `/api/booking/` chưa được triển khai. Frontend chưa nên
 giả định dữ liệu đặt phòng ngoài API contract.
 
+## Trạng thái sau lần kiểm tra gần nhất
+
+Frontend đã hoàn thành:
+
+- Giao diện đăng nhập và đổi mật khẩu có CSS chung.
+- Cấu trúc HTML đầy đủ, có label và autocomplete.
+- Gọi đúng các API đăng nhập, session, đổi mật khẩu và đăng xuất.
+- Điều hướng theo `must_change_password`.
+- Hiển thị `display_name` trên trang chính.
+- Có loading và xử lý lỗi cho thao tác đăng nhập, đổi mật khẩu.
+
+Phần xác thực chưa được nghiệm thu vì các mục trong phần **Yêu cầu còn thiếu** bên
+dưới vẫn cần xử lý.
+
 ## Dữ liệu người dùng Backend trả về
 
 `POST /api/login/` và `GET /api/session/` trả:
@@ -63,6 +77,9 @@ Mở login.html
 4. Điều hướng theo `must_change_password`.
 5. Khóa nút và hiển thị trạng thái đang xử lý trong lúc gửi.
 
+Hiện bước 1 chưa được triển khai. Phải hoàn thành để người đã đăng nhập không nhìn
+thấy lại form đăng nhập.
+
 ### `change-password.html`
 
 1. Gọi `GET /api/session/` trước khi hiển thị form.
@@ -79,6 +96,7 @@ Mở login.html
 3. `must_change_password=true`: chuyển tới `change-password.html`.
 4. Hiển thị `display_name`.
 5. Nút đăng xuất gọi `POST /api/logout/`; chỉ chuyển trang sau khi Backend phản hồi.
+6. Chưa hiển thị role cho tới khi Backend bổ sung `role` vào API contract.
 
 ## Module gọi API
 
@@ -165,14 +183,69 @@ Middleware Backend chặn toàn bộ `/api/booking/`:
 - HTTP 403 và `PASSWORD_CHANGE_REQUIRED` nếu chưa đổi mật khẩu lần đầu.
 - Request chỉ đi tiếp khi session hợp lệ và `must_change_password=false`.
 
-## Giao diện tối thiểu cần hoàn thiện
+## Yêu cầu còn thiếu cần Frontend xử lý
 
-- Tạo một file CSS dùng chung; form căn giữa và dùng tốt trên điện thoại.
-- Bổ sung `label`, thông báo lỗi và trạng thái loading.
-- Dùng `autocomplete="username"`, `current-password` và `new-password`.
-- Bổ sung đầy đủ `DOCTYPE`, charset và viewport cho mọi trang.
-- Không dùng `alert()` cho lỗi; hiển thị thông báo trong trang.
-- Không gửi trùng request khi người dùng bấm nút nhiều lần.
+### 1. Sửa `api.js`
+
+- Bọc mọi lần gọi `response.json()` bằng `try/catch`.
+- Trả lỗi `INVALID_RESPONSE` khi máy chủ không trả JSON.
+- Kiểm tra `response.ok` khi lấy CSRF token.
+- Khi nhận `CSRF_FAILED`, xóa token cũ, lấy token mới và cho phép thử lại.
+- Không chỉ xử lý riêng HTTP 500; mọi HTTP status đều phải trả được `data` thống nhất.
+
+Mẫu `apiRequest()` phía trên là hành vi cần triển khai vào file thật, không chỉ để
+tham khảo trong README.
+
+### 2. Kiểm tra session khi mở `login.html`
+
+- Gọi `GET /api/session/` trước khi hiển thị form.
+- HTTP 401: hiển thị form đăng nhập, không hiện lỗi.
+- Session hợp lệ và `must_change_password=true`: chuyển tới trang đổi mật khẩu.
+- Session hợp lệ và `must_change_password=false`: chuyển tới trang chính.
+- Có trạng thái đang kiểm tra để form không nháy lên trước khi chuyển trang.
+
+### 3. Hoàn thiện kiểm tra ở `change-password.html`
+
+- Ẩn form trong lúc `GET /api/session/` chưa hoàn tất.
+- Bọc `checkAccess()` bằng `try/catch` và hiển thị lỗi khi Backend không kết nối.
+- Kiểm tra hai mật khẩu khớp nhau trước khi gọi API.
+- Xử lý riêng `CSRF_FAILED`; không chỉ rơi vào lỗi chung.
+
+Backend vẫn kiểm tra lại mật khẩu. Validation Frontend chỉ giúp người dùng nhận
+phản hồi sớm hơn.
+
+### 4. Hoàn thiện tải trang chính
+
+- Bọc `initializeApp()` bằng `try/catch`.
+- Hiển thị thông báo khi Backend không kết nối thay vì để trang trống.
+- Chỉ hiện dashboard sau khi session hợp lệ.
+- Dùng `display_name`; chỉ dùng `username` làm giá trị dự phòng.
+
+### 5. Sửa luồng đăng xuất
+
+- Dùng `try/catch/finally`.
+- Chỉ chuyển về `login.html` khi API đăng xuất thành công hoặc Backend xác nhận
+  session đã hết hạn.
+- Nếu request thất bại, hiển thị lỗi và mở lại nút để người dùng thử lại.
+
+### 6. Không giả định role và API nghiệp vụ
+
+Backend hiện chưa trả `role`. Xóa giá trị giả:
+
+```javascript
+const role = data.role || 'reservation';
+```
+
+Không dùng role giả để hiển thị menu như thể đã phân quyền. Nếu giữ màn hình phòng
+trống bằng mock data, phải ghi rõ “Dữ liệu minh họa – API chưa triển khai”, không
+hard-code mock như dữ liệu thật và không gọi đây là kết quả từ Backend.
+
+### 7. Kiểm tra trước khi gửi pull request
+
+- Thử khi Backend đang chạy và khi Backend bị dừng.
+- Thử đăng nhập sai, đổi mật khẩu sai, session hết hạn và đăng xuất thất bại.
+- Chạy `git diff --check` và xóa khoảng trắng cuối dòng.
+- Trong pull request, liệt kê các luồng đã kiểm tra và ảnh giao diện tương ứng.
 
 ## Tiêu chí bàn giao
 
