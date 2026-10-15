@@ -9,25 +9,50 @@ from django.views.decorators.http import require_GET, require_POST
 from .models import EmployeeProfile
 
 
+def _error(code, message, status):
+    return JsonResponse(
+        {'status': 'error', 'code': code, 'message': message},
+        status=status,
+    )
+
+
 def _must_change_password(user):
     return EmployeeProfile.objects.filter(user=user, must_change_password=True).exists()
 
 
 def _unauthorized():
-    return JsonResponse(
-        {'status': 'error', 'message': 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.'},
-        status=401,
+    return _error(
+        'AUTHENTICATION_REQUIRED',
+        'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.',
+        401,
     )
 
 
 def _json_body(request):
     try:
-        return json.loads(request.body), None
+        data = json.loads(request.body)
     except (json.JSONDecodeError, UnicodeDecodeError):
-        return None, JsonResponse(
-            {'status': 'error', 'message': 'Dữ liệu gửi lên không hợp lệ.'},
-            status=400,
-        )
+        return None, _error('INVALID_JSON', 'Dữ liệu gửi lên không hợp lệ.', 400)
+
+    if not isinstance(data, dict):
+        return None, _error('INVALID_JSON', 'Dữ liệu gửi lên phải là object JSON.', 400)
+    return data, None
+
+
+def _user_data(user):
+    return {
+        'username': user.username,
+        'display_name': user.get_full_name() or user.username,
+        'must_change_password': _must_change_password(user),
+    }
+
+
+def csrf_failure(request, reason=''):
+    return _error(
+        'CSRF_FAILED',
+        'CSRF token không hợp lệ hoặc đã hết hạn.',
+        403,
+    )
 
 
 @require_GET
@@ -40,11 +65,7 @@ def api_csrf(request):
 def api_session(request):
     if not request.user.is_authenticated:
         return _unauthorized()
-    return JsonResponse({
-        'status': 'success',
-        'username': request.user.get_full_name() or request.user.username,
-        'must_change_password': _must_change_password(request.user),
-    })
+    return JsonResponse({'status': 'success', **_user_data(request.user)})
 
 
 @require_POST
@@ -56,24 +77,22 @@ def api_login(request):
     username = str(data.get('username', '')).strip()
     password = str(data.get('password', ''))
     if not username or not password:
-        return JsonResponse(
-            {'status': 'error', 'message': 'Vui lòng nhập tên đăng nhập và mật khẩu.'},
-            status=400,
+        return _error(
+            'REQUIRED_FIELDS',
+            'Vui lòng nhập tên đăng nhập và mật khẩu.',
+            400,
         )
 
     user = authenticate(request, username=username, password=password)
     if user is None:
-        return JsonResponse(
-            {'status': 'error', 'message': 'Tên đăng nhập hoặc mật khẩu không đúng.'},
-            status=401,
+        return _error(
+            'INVALID_CREDENTIALS',
+            'Tên đăng nhập hoặc mật khẩu không đúng.',
+            401,
         )
 
     login(request, user)
-    return JsonResponse({
-        'status': 'success',
-        'username': user.get_full_name() or user.username,
-        'must_change_password': _must_change_password(user),
-    })
+    return JsonResponse({'status': 'success', **_user_data(user)})
 
 
 @require_POST
@@ -96,14 +115,16 @@ def api_change_password(request):
     new_password = str(data.get('new_password', ''))
     confirm_password = str(data.get('confirm_password', ''))
     if not new_password:
-        return JsonResponse(
-            {'status': 'error', 'message': 'Mật khẩu mới không được để trống.'},
-            status=400,
+        return _error(
+            'PASSWORD_REQUIRED',
+            'Mật khẩu mới không được để trống.',
+            400,
         )
     if new_password != confirm_password:
-        return JsonResponse(
-            {'status': 'error', 'message': 'Mật khẩu xác nhận không khớp.'},
-            status=400,
+        return _error(
+            'PASSWORD_MISMATCH',
+            'Mật khẩu xác nhận không khớp.',
+            400,
         )
 
     request.user.set_password(new_password)

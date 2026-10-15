@@ -32,8 +32,9 @@ python -m venv venv
 .\venv\Scripts\python.exe manage.py createsuperuser
 ```
 
-Trong Django Admin, tạo một User thử và một `EmployeeProfile` tương ứng. Đặt
-`must_change_password = true` để kiểm thử luồng đổi mật khẩu lần đầu.
+`createsuperuser` tạo tài khoản quản trị không bắt buộc đổi mật khẩu. Khi tạo một
+User nhân viên trong Django Admin hoặc bằng `User.objects.create_user()`, Backend
+tự tạo `EmployeeProfile` và yêu cầu nhân viên đổi mật khẩu ở lần đăng nhập đầu.
 
 ## Chạy cả Backend và Frontend
 

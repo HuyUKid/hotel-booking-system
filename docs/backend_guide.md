@@ -35,6 +35,9 @@ prefix `/api/`; các API nghiệp vụ mới dùng prefix `/api/booking/`.
 - Backend luôn kiểm tra lại dữ liệu; không phụ thuộc validation ở trình duyệt.
 - Không trả mật khẩu, password hash, session key hoặc stack trace cho Frontend.
 - Không đổi URL hoặc tên trường đã thống nhất mà chưa cập nhật API contract.
+- Trả mã lỗi ổn định trong trường `code`; không yêu cầu Frontend phân tích
+  nội dung tiếng Việt trong `message`.
+- Mọi API `/api/booking/` phải đi qua kiểm tra session và trạng thái đổi mật khẩu.
 
 ## 4. Tài khoản dùng để tích hợp
 
@@ -47,11 +50,13 @@ cd backend
 
 ```python
 from django.contrib.auth.models import User
-from authentication.models import EmployeeProfile
 
 user = User.objects.create_user(username='nv01', password='mat-khau-ban-dau')
-EmployeeProfile.objects.create(user=user, must_change_password=True)
 ```
+
+Signal của module `authentication` tự tạo `EmployeeProfile` với
+`must_change_password=True`. Không cần tạo profile thủ công. Tài khoản tạo bằng
+`createsuperuser` nhận `must_change_password=False`.
 
 Chỉ gửi tài khoản thử qua kênh làm việc của nhóm. Không commit mật khẩu thật hoặc
 dữ liệu bí mật vào repository.

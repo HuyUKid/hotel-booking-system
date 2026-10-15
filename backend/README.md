@@ -60,8 +60,10 @@ Quan hệ `OneToOneField` bảo đảm một tài khoản có tối đa một pr
 profile cũng bị xóa. Nếu profile tồn tại và cờ bằng `True`, frontend phải đưa người
 dùng đến màn hình đổi mật khẩu.
 
-Hiện profile không tự sinh khi tạo User. Người quản trị cần tạo `EmployeeProfile`
-trong Django Admin hoặc bằng code.
+Signal trong `authentication/signals.py` tự tạo profile khi có User mới. Tài khoản
+nhân viên nhận `must_change_password=True`; superuser nhận giá trị `False` để có
+thể vào trang quản trị ngay. Migration dữ liệu cũng bổ sung profile cho các User
+cũ còn thiếu.
 
 ## 4. Luồng request
 
@@ -85,7 +87,7 @@ Ví dụ đăng nhập:
 2. Frontend gửi `POST /api/login/` với username, password và token.
 3. `authenticate()` kiểm tra mật khẩu đã băm trong database.
 4. `login()` tạo session và gửi session cookie về trình duyệt.
-5. Backend trả tên hiển thị và `must_change_password`.
+5. Backend trả `username`, `display_name` và `must_change_password`.
 
 Backend không trả password, password hash hoặc session key trong JSON.
 
@@ -139,20 +141,25 @@ Phải dùng `set_password()` khi đổi mật khẩu. Không gán trực tiếp
 Frontend phải gửi `credentials: "include"`. Các request POST phải gửi
 `X-CSRFToken`. Origin frontend được cấu hình trong `config/settings.py`.
 
+`BookingAuthenticationMiddleware` bảo vệ toàn bộ `/api/booking/`: request chưa
+đăng nhập nhận HTTP 401; tài khoản còn `must_change_password=True` nhận HTTP 403.
+Vì vậy người dùng không thể bỏ qua màn hình đổi mật khẩu bằng cách gọi API trực tiếp.
+
+Response lỗi xác thực luôn có `status`, `code` và `message`. Frontend dùng `code`
+để xử lý chương trình và dùng `message` để hiển thị cho người dùng.
+
 ## 9. Tạo tài khoản nhân viên thử nghiệm
 
 Có thể tạo tài khoản trong Django Admin hoặc bằng `python manage.py shell`:
 
 ```python
 from django.contrib.auth.models import User
-from authentication.models import EmployeeProfile
-
 user = User.objects.create_user(username='nv01', password='mat-khau-ban-dau')
-EmployeeProfile.objects.create(user=user, must_change_password=True)
 ```
 
-`must_change_password=True` yêu cầu frontend chuyển người dùng tới màn hình đổi
-mật khẩu ngay sau lần đăng nhập đầu tiên.
+Backend tự tạo `EmployeeProfile(must_change_password=True)`. Sau khi nhân viên
+đăng nhập, frontend chuyển tới màn hình đổi mật khẩu. `createsuperuser` cũng tự
+tạo profile nhưng không bắt buộc đổi mật khẩu.
 
 ## 10. Chạy và kiểm thử
 

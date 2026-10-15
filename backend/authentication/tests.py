@@ -15,7 +15,16 @@ class AuthenticationApiTests(TestCase):
             username='nv01', password='MatKhauBanDau!234',
             first_name='An', last_name='Nguyễn',
         )
-        self.profile = EmployeeProfile.objects.create(user=self.user)
+        self.profile = EmployeeProfile.objects.get(user=self.user)
+
+    def test_regular_user_gets_password_change_profile_automatically(self):
+        self.assertTrue(self.profile.must_change_password)
+
+    def test_superuser_gets_unlocked_profile_automatically(self):
+        admin = User.objects.create_superuser(
+            username='admin', password='AdminPassword!234',
+        )
+        self.assertFalse(admin.employeeprofile.must_change_password)
 
     def _csrf_client(self):
         client = Client(enforce_csrf_checks=True)
@@ -30,7 +39,9 @@ class AuthenticationApiTests(TestCase):
         self.assertEqual(response['access-control-allow-credentials'], 'true')
 
     def test_session_requires_authentication(self):
-        self.assertEqual(self.client.get(reverse('api_session')).status_code, 401)
+        response = self.client.get(reverse('api_session'))
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['code'], 'AUTHENTICATION_REQUIRED')
 
     def test_login_rejects_request_without_csrf_token(self):
         client = Client(enforce_csrf_checks=True)
@@ -40,6 +51,7 @@ class AuthenticationApiTests(TestCase):
             content_type='application/json', HTTP_ORIGIN=self.frontend_origin,
         )
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['code'], 'CSRF_FAILED')
 
     def test_login_creates_session_and_reports_password_change(self):
         client, csrf_token = self._csrf_client()
@@ -51,7 +63,8 @@ class AuthenticationApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()['must_change_password'])
-        self.assertEqual(response.json()['username'], 'An Nguyễn')
+        self.assertEqual(response.json()['username'], 'nv01')
+        self.assertEqual(response.json()['display_name'], 'An Nguyễn')
 
     def test_login_rejects_wrong_password(self):
         response = self.client.post(
@@ -60,6 +73,16 @@ class AuthenticationApiTests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['code'], 'INVALID_CREDENTIALS')
+
+    def test_login_rejects_json_array(self):
+        response = self.client.post(
+            reverse('api_login'),
+            data=json.dumps([]),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['code'], 'INVALID_JSON')
 
     def test_change_password_unlocks_account_and_keeps_session(self):
         self.client.force_login(self.user)
@@ -97,3 +120,20 @@ class AuthenticationApiTests(TestCase):
         self.client.force_login(self.user)
         self.assertEqual(self.client.post(reverse('api_logout')).status_code, 200)
         self.assertEqual(self.client.get(reverse('api_session')).status_code, 401)
+
+    def test_booking_api_requires_authentication(self):
+        response = self.client.get('/api/booking/not-found/')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()['code'], 'AUTHENTICATION_REQUIRED')
+
+    def test_booking_api_requires_initial_password_change(self):
+        self.client.force_login(self.user)
+        response = self.client.get('/api/booking/not-found/')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['code'], 'PASSWORD_CHANGE_REQUIRED')
+
+    def test_booking_api_passes_middleware_after_password_change(self):
+        self.profile.must_change_password = False
+        self.profile.save(update_fields=['must_change_password'])
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.get('/api/booking/not-found/').status_code, 404)
