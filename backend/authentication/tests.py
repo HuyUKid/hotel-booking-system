@@ -15,7 +15,16 @@ class AuthenticationApiTests(TestCase):
             username='nv01', password='MatKhauBanDau!234',
             first_name='An', last_name='Nguyễn',
         )
-        self.profile = EmployeeProfile.objects.create(user=self.user)
+        self.profile = EmployeeProfile.objects.get(user=self.user)
+
+    def test_regular_user_gets_password_change_profile_automatically(self):
+        self.assertTrue(self.profile.must_change_password)
+
+    def test_superuser_gets_unlocked_profile_automatically(self):
+        admin = User.objects.create_superuser(
+            username='admin', password='AdminPassword!234',
+        )
+        self.assertFalse(admin.employeeprofile.must_change_password)
 
     def _csrf_client(self):
         client = Client(enforce_csrf_checks=True)

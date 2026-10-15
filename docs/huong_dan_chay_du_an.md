@@ -13,6 +13,10 @@ python -m venv venv
 .\venv\Scripts\python.exe manage.py createsuperuser
 ```
 
+`createsuperuser` tạo tài khoản quản trị không bắt buộc đổi mật khẩu. Khi tạo một
+User nhân viên trong Django Admin hoặc bằng `User.objects.create_user()`, Backend
+tự tạo `EmployeeProfile` và yêu cầu nhân viên đổi mật khẩu ở lần đăng nhập đầu.
+
 ## Chạy backend
 
 ```powershell

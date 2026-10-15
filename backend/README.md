@@ -60,8 +60,10 @@ Quan hệ `OneToOneField` bảo đảm một tài khoản có tối đa một pr
 profile cũng bị xóa. Nếu profile tồn tại và cờ bằng `True`, frontend phải đưa người
 dùng đến màn hình đổi mật khẩu.
 
-Hiện profile không tự sinh khi tạo User. Người quản trị cần tạo `EmployeeProfile`
-trong Django Admin hoặc bằng code.
+Signal trong `authentication/signals.py` tự tạo profile khi có User mới. Tài khoản
+nhân viên nhận `must_change_password=True`; superuser nhận giá trị `False` để có
+thể vào trang quản trị ngay. Migration dữ liệu cũng bổ sung profile cho các User
+cũ còn thiếu.
 
 ## 4. Luồng request
 
@@ -145,14 +147,12 @@ Có thể tạo tài khoản trong Django Admin hoặc bằng `python manage.py 
 
 ```python
 from django.contrib.auth.models import User
-from authentication.models import EmployeeProfile
-
 user = User.objects.create_user(username='nv01', password='mat-khau-ban-dau')
-EmployeeProfile.objects.create(user=user, must_change_password=True)
 ```
 
-`must_change_password=True` yêu cầu frontend chuyển người dùng tới màn hình đổi
-mật khẩu ngay sau lần đăng nhập đầu tiên.
+Backend tự tạo `EmployeeProfile(must_change_password=True)`. Sau khi nhân viên
+đăng nhập, frontend chuyển tới màn hình đổi mật khẩu. `createsuperuser` cũng tự
+tạo profile nhưng không bắt buộc đổi mật khẩu.
 
 ## 10. Chạy và kiểm thử
 

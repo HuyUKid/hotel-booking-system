@@ -47,11 +47,13 @@ cd backend
 
 ```python
 from django.contrib.auth.models import User
-from authentication.models import EmployeeProfile
 
 user = User.objects.create_user(username='nv01', password='mat-khau-ban-dau')
-EmployeeProfile.objects.create(user=user, must_change_password=True)
 ```
+
+Signal của module `authentication` tự tạo `EmployeeProfile` với
+`must_change_password=True`. Không cần tạo profile thủ công. Tài khoản tạo bằng
+`createsuperuser` nhận `must_change_password=False`.
 
 Chỉ gửi tài khoản thử qua kênh làm việc của nhóm. Không commit mật khẩu thật hoặc
 dữ liệu bí mật vào repository.
