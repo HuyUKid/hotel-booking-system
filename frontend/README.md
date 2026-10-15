@@ -1,8 +1,9 @@
-# Hướng dẫn Frontend xây dựng phần đăng nhập
+# Hướng dẫn Frontend xác thực
 
-Phần frontend chưa được triển khai. Thành viên frontend dùng tài liệu này để tự
-xây dựng giao diện đăng nhập, đổi mật khẩu và tích hợp với Django API. Có thể dùng
-HTML/CSS/JavaScript thuần, React hoặc Vue; API không phụ thuộc framework.
+Thư mục này đã có phiên bản HTML/JavaScript cơ bản cho đăng nhập, đổi mật khẩu,
+kiểm tra session và đăng xuất. Thành viên Frontend tiếp tục hoàn thiện giao diện
+và hành vi theo tài liệu này; mọi thay đổi request/response phải được thống nhất
+với Backend trong `docs/api_contract.md`.
 
 Backend phát triển mặc định tại:
 
