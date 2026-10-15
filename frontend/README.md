@@ -1,23 +1,46 @@
-# Hướng dẫn Frontend hoàn thiện luồng đăng nhập
+# Hướng dẫn Frontend tích hợp xác thực
 
-Thư mục `frontend/` đã có bản HTML/JavaScript cơ bản. Frontend cần hoàn thiện luồng
-dưới đây mà không cần đổi sang framework khác. API chính thức được mô tả trong
-[`api_contract.md`](../docs/api_contract.md).
+Thư mục `frontend/` chứa giao diện HTML/JavaScript cơ bản. Frontend tiếp tục
+hoàn thiện giao diện theo tài liệu này và giao tiếp với Django Backend qua HTTP/JSON.
 
-Backend phát triển mặc định tại:
+- Backend: `http://127.0.0.1:8000`
+- Frontend: `http://127.0.0.1:5500`
+- API chính thức: [`docs/api_contract.md`](../docs/api_contract.md)
 
-```text
-http://127.0.0.1:8000
+Không trộn `localhost` với `127.0.0.1`, vì trình duyệt có thể không gửi đúng
+session cookie.
+
+## Các file hiện có
+
+| File | Trách nhiệm |
+| --- | --- |
+| `api.js` | Gọi API, gửi cookie và CSRF token |
+| `login.html` | Đăng nhập và điều hướng theo trạng thái mật khẩu |
+| `change-password.html` | Đổi mật khẩu bắt buộc lần đầu |
+| `index.html` | Kiểm tra session, hiển thị nhân viên và đăng xuất |
+
+Các endpoint nghiệp vụ `/api/booking/` chưa được triển khai. Frontend chưa nên
+giả định dữ liệu đặt phòng ngoài API contract.
+
+## Dữ liệu người dùng Backend trả về
+
+`POST /api/login/` và `GET /api/session/` trả:
+
+```json
+{
+  "status": "success",
+  "username": "nv01",
+  "display_name": "Nguyễn Văn A",
+  "must_change_password": true
+}
 ```
 
-Frontend nên chạy tại một trong hai origin đã được backend cho phép:
+- Dùng `username` làm mã tài khoản.
+- Dùng `display_name` để hiển thị trên giao diện.
+- Dùng `must_change_password` để quyết định trang tiếp theo.
 
-```text
-http://127.0.0.1:5500
-http://127.0.0.1:5501
-```
-
-Không trộn `localhost` với `127.0.0.1`, vì cookie phiên có thể không được gửi.
+Không lưu mật khẩu hoặc tự ghi trạng thái đăng nhập vào `localStorage`. Session
+do Backend xác nhận mới là nguồn dữ liệu chính xác.
 
 ## Luồng điều hướng bắt buộc
 
@@ -32,130 +55,34 @@ Mở login.html
 └── must_change_password = false     → index.html
 ```
 
-Frontend phải coi `GET /api/session/` là nguồn xác nhận trạng thái đăng nhập;
-không dùng `localStorage` để tự ghi rằng người dùng đã đăng nhập.
+### `login.html`
 
-Backend hiện đã hỗ trợ đầy đủ năm endpoint xác thực trong tài liệu. Middleware
-cũng đã bảo vệ prefix `/api/booking/`, nhưng các endpoint nghiệp vụ đặt phòng chưa
-được xây dựng; Frontend chưa nên giả định dữ liệu đặt phòng ngoài API contract.
+1. Gọi `GET /api/session/` khi mở trang.
+2. HTTP 401 tại bước này là bình thường: hiển thị form đăng nhập.
+3. Gửi `POST /api/login/` với `username` và `password`.
+4. Điều hướng theo `must_change_password`.
+5. Khóa nút và hiển thị trạng thái đang xử lý trong lúc gửi.
 
-## Những việc Frontend cần làm
+### `change-password.html`
 
-### 1. Hoàn thiện `api.js`
+1. Gọi `GET /api/session/` trước khi hiển thị form.
+2. HTTP 401: chuyển về `login.html`.
+3. `must_change_password=false`: chuyển tới `index.html`.
+4. Gửi `POST /api/change-password/` với `new_password` và
+   `confirm_password`.
+5. Thành công: chuyển tới `index.html`.
 
-- Luôn gửi `credentials: "include"`.
-- Tự lấy và gửi `X-CSRFToken` cho POST.
-- Bọc `response.json()` trong `try/catch` vì response lỗi có thể không phải JSON.
-- Trả lỗi kết nối thống nhất để mọi trang cùng hiển thị được.
-- Dùng `data.code` cho điều hướng và `data.message` để hiển thị.
+### `index.html`
 
-### 2. Hoàn thiện `login.html`
+1. Gọi `GET /api/session/` trước khi hiển thị nội dung.
+2. HTTP 401: chuyển về `login.html`.
+3. `must_change_password=true`: chuyển tới `change-password.html`.
+4. Hiển thị `display_name`.
+5. Nút đăng xuất gọi `POST /api/logout/`; chỉ chuyển trang sau khi Backend phản hồi.
 
-- Gọi `/api/session/` khi mở trang; người đã đăng nhập không cần thấy lại form.
-- Khóa nút và hiển thị “Đang đăng nhập…” trong lúc gửi.
-- Có `try/catch/finally` để lỗi mạng không làm nút bị khóa.
-- Điều hướng theo `must_change_password` sau khi đăng nhập.
-- Thêm `label`, `autocomplete="username"` và `autocomplete="current-password"`.
+## Module gọi API
 
-### 3. Hoàn thiện `change-password.html`
-
-- Gọi `/api/session/` trước khi hiển thị form.
-- HTTP 401 chuyển về `login.html`.
-- Nếu `must_change_password=false`, chuyển tới `index.html`.
-- Kiểm tra hai ô khớp nhau trước khi gửi, nhưng vẫn hiển thị lỗi Backend trả về.
-- Có loading, xử lý lỗi mạng và mở lại nút khi thất bại.
-- Không dùng `alert()`; hiển thị thông báo ngay trong trang.
-
-### 4. Hoàn thiện `index.html`
-
-- Gọi `/api/session/` trước khi hiển thị nội dung.
-- Dùng `display_name` để chào nhân viên; `username` là mã đăng nhập.
-- HTTP 401 chuyển về trang đăng nhập.
-- `PASSWORD_CHANGE_REQUIRED` hoặc `must_change_password=true` chuyển tới trang
-  đổi mật khẩu.
-- Khi đăng xuất thất bại, hiển thị lỗi và mở lại nút để người dùng thử lại.
-
-## Cách xử lý mã lỗi từ Backend
-
-| `data.code` | Frontend cần làm |
-| --- | --- |
-| `INVALID_CREDENTIALS` | Giữ form đăng nhập và hiển thị `message` |
-| `AUTHENTICATION_REQUIRED` | Chuyển tới `login.html`, trừ lần kiểm tra session ngay trên trang đăng nhập |
-| `PASSWORD_CHANGE_REQUIRED` | Chuyển tới `change-password.html` |
-| `PASSWORD_REQUIRED` | Hiển thị lỗi tại form đổi mật khẩu |
-| `PASSWORD_MISMATCH` | Hiển thị lỗi tại form đổi mật khẩu |
-| `CSRF_FAILED` | Lấy CSRF token mới; nếu vẫn lỗi thì báo người dùng tải lại trang |
-| `INVALID_JSON` hoặc `REQUIRED_FIELDS` | Hiển thị `message` tại form hiện tại |
-
-HTTP 401 từ lần gọi `/api/session/` khi mở `login.html` là trạng thái bình thường:
-người dùng chưa có phiên nên Frontend chỉ cần hiển thị form, không hiện cảnh báo.
-
-### 5. Giao diện tối thiểu
-
-- Tạo một file CSS dùng chung, form căn giữa và hiển thị tốt trên điện thoại.
-- Thông báo lỗi rõ ràng, không làm tải lại cả trang.
-- Nút có trạng thái mặc định, đang xử lý và bị vô hiệu hóa.
-- `change-password.html` và `index.html` cần đầy đủ `DOCTYPE`, `head`, charset và
-  viewport như `login.html`.
-
-## Sản phẩm Frontend cần bàn giao
-
-- Trang đăng nhập có trạng thái đang gửi và vùng hiển thị lỗi.
-- Trang đổi mật khẩu bắt buộc.
-- Trang chính tạm thời để chứng minh phiên đăng nhập hoạt động.
-- Nút đăng xuất.
-- Một module gọi API dùng chung, luôn gửi session cookie và CSRF token đúng cách.
-- Cơ chế bảo vệ trang riêng tư bằng `GET /api/session/`.
-
-Không lưu mật khẩu, CSRF token hoặc trạng thái “đã đăng nhập” vào mã nguồn.
-Session do backend xác nhận mới là nguồn dữ liệu chính xác.
-
-## Các màn hình Frontend cần làm
-
-### 1. Trang đăng nhập
-
-Trường nhập:
-
-- `username`: tên đăng nhập.
-- `password`: mật khẩu.
-
-Luồng xử lý:
-
-1. Lấy CSRF token từ `GET /api/csrf/`.
-2. Gửi `POST /api/login/`.
-3. Nếu `must_change_password = true`, chuyển đến trang đổi mật khẩu.
-4. Nếu bằng `false`, chuyển đến trang chính của ứng dụng.
-5. Nếu HTTP 400/401, hiển thị `message` từ backend.
-
-### 2. Trang đổi mật khẩu bắt buộc
-
-Trường nhập:
-
-- `new_password`.
-- `confirm_password`.
-
-Gửi `POST /api/change-password/`. Thành công thì chuyển đến trang chính. Nếu lỗi,
-hiển thị `message`; backend chỉ kiểm tra mật khẩu không rỗng và hai ô có khớp nhau.
-
-### 3. Kiểm tra phiên khi mở trang riêng tư
-
-Mỗi khi mở trang cần đăng nhập, gọi `GET /api/session/`:
-
-- HTTP 401: chuyển về trang đăng nhập.
-- `must_change_password = true`: chuyển sang trang đổi mật khẩu.
-- Thành công: dùng `display_name` để hiển thị tên nhân viên.
-
-Không dùng `localStorage` làm bằng chứng đăng nhập. Backend xác định người dùng từ
-session cookie.
-
-### 4. Đăng xuất
-
-Nút đăng xuất gửi `POST /api/logout/`, sau đó chuyển về trang đăng nhập. Vô hiệu
-hóa nút trong lúc gửi để tránh thao tác lặp.
-
-## Hàm gọi API tham khảo
-
-Frontend phải gửi cookie bằng `credentials: "include"` và gửi CSRF token cho POST:
+Mọi request phải gửi session cookie. Request POST phải gửi CSRF token:
 
 ```javascript
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -166,6 +93,11 @@ async function prepareCsrf() {
     credentials: 'include'
   });
   const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Không lấy được CSRF token.');
+  }
+
   csrfToken = data.csrf_token;
 }
 
@@ -184,6 +116,7 @@ async function apiRequest(path, options = {}) {
     headers,
     credentials: 'include'
   });
+
   let data;
   try {
     data = await response.json();
@@ -194,59 +127,64 @@ async function apiRequest(path, options = {}) {
       message: 'Máy chủ trả về dữ liệu không hợp lệ.'
     };
   }
+
   return { response, data };
 }
 ```
 
-Ví dụ đăng nhập:
+Mỗi trang phải dùng `try/catch/finally` để lỗi mạng không làm nút bị khóa hoặc
+giao diện đứng yên.
 
-```javascript
-const { response, data } = await apiRequest('/api/login/', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username, password })
-});
+## Xử lý lỗi
 
-if (!response.ok) {
-  showError(data.message);
-} else if (data.must_change_password) {
-  goToChangePassword();
-} else {
-  goToHome();
+Backend trả lỗi theo cấu trúc:
+
+```json
+{
+  "status": "error",
+  "code": "INVALID_CREDENTIALS",
+  "message": "Tên đăng nhập hoặc mật khẩu không đúng."
 }
 ```
 
-## Quy ước lỗi
+Frontend dùng `code` để điều hướng và dùng `message` để hiển thị:
 
-| HTTP status | Cách xử lý ở frontend |
+| `code` | Cách xử lý |
 | --- | --- |
-| 200 | Thao tác thành công |
-| 400 | Dữ liệu thiếu, sai định dạng hoặc mật khẩu không hợp lệ |
-| 401 | Sai tài khoản/mật khẩu hoặc session hết hạn |
-| 403 | CSRF sai hoặc tài khoản chưa hoàn thành đổi mật khẩu |
-| 405 | Gọi sai HTTP method |
-| 500 | Báo lỗi hệ thống, không hiển thị stack trace |
+| `INVALID_CREDENTIALS` | Giữ form đăng nhập và hiển thị lỗi |
+| `AUTHENTICATION_REQUIRED` | Chuyển về `login.html` |
+| `PASSWORD_CHANGE_REQUIRED` | Chuyển tới `change-password.html` |
+| `PASSWORD_REQUIRED` | Hiển thị lỗi trong form đổi mật khẩu |
+| `PASSWORD_MISMATCH` | Hiển thị lỗi trong form đổi mật khẩu |
+| `CSRF_FAILED` | Lấy token mới; nếu vẫn lỗi thì yêu cầu tải lại trang |
+| `INVALID_JSON`, `REQUIRED_FIELDS` | Hiển thị `message` trong form hiện tại |
 
-## Frontend cần bàn giao lại cho Backend
+Middleware Backend chặn toàn bộ `/api/booking/`:
 
-- Origin phát triển và origin triển khai thật để backend cấu hình CORS/CSRF.
-- Tên và đường dẫn các màn hình đăng nhập, đổi mật khẩu và trang chính.
-- Cách frontend muốn hiển thị lỗi validation.
-- Kết quả thử đủ bốn luồng: đăng nhập đúng, đăng nhập sai, đổi mật khẩu, đăng xuất.
-- Log Network của trình duyệt nếu gặp lỗi tích hợp: URL, method, status và response.
+- HTTP 401 nếu chưa đăng nhập.
+- HTTP 403 và `PASSWORD_CHANGE_REQUIRED` nếu chưa đổi mật khẩu lần đầu.
+- Request chỉ đi tiếp khi session hợp lệ và `must_change_password=false`.
 
-## Tiêu chí hoàn thành
+## Giao diện tối thiểu cần hoàn thiện
 
-- Đăng nhập đúng và chuyển trang theo `must_change_password`.
-- Đăng nhập sai hiển thị thông báo từ backend, không tải lại cả trang.
-- Tải lại trang vẫn nhận ra session hiện tại.
-- Người chưa đăng nhập không vào được trang riêng tư.
-- Đổi mật khẩu thành công và vẫn giữ phiên đăng nhập.
+- Tạo một file CSS dùng chung; form căn giữa và dùng tốt trên điện thoại.
+- Bổ sung `label`, thông báo lỗi và trạng thái loading.
+- Dùng `autocomplete="username"`, `current-password` và `new-password`.
+- Bổ sung đầy đủ `DOCTYPE`, charset và viewport cho mọi trang.
+- Không dùng `alert()` cho lỗi; hiển thị thông báo trong trang.
+- Không gửi trùng request khi người dùng bấm nút nhiều lần.
+
+## Tiêu chí bàn giao
+
+- Đăng nhập sai hiển thị lỗi mà không tải lại trang.
+- Đăng nhập lần đầu chuyển tới trang đổi mật khẩu.
+- Đổi mật khẩu thành công và giữ nguyên session.
+- Tải lại trang chính vẫn hiển thị đúng `display_name`.
+- Người chưa đăng nhập không mở được trang chính.
+- Người chưa đổi mật khẩu không gọi được API đặt phòng.
 - Đăng xuất xong không truy cập lại được trang riêng tư.
-- Giao diện khóa nút trong lúc gửi và không gửi trùng request.
+- Lỗi mất kết nối không làm giao diện bị khóa.
 
-Chi tiết request/response chính thức nằm tại
-[`api_contract.md`](../docs/api_contract.md). Cách chạy hai phía nằm tại
-[`huong_dan_chay_du_an.md`](../docs/huong_dan_chay_du_an.md). Quy tắc tạo nhánh,
-commit và phối hợp mã nguồn nằm tại
-[`git_workflow.md`](../docs/git_workflow.md).
+Cách chạy hai phía nằm tại
+[`huong_dan_chay_du_an.md`](../docs/huong_dan_chay_du_an.md). Quy tắc làm việc
+với Git nằm tại [`git_workflow.md`](../docs/git_workflow.md).
