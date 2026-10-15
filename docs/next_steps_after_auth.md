@@ -1,248 +1,73 @@
-# Lộ trình sau khi hoàn thành đăng nhập và mật khẩu
+# Kế hoạch phối hợp sau xác thực
 
-Lộ trình này được xây dựng dựa trên
-[tài liệu quy trình đặt phòng](reference/quy-trinh-dat-phong.pdf). File PDF trong
-repository là bản đã bỏ trang bìa đầu tiên của tài liệu nguồn.
+Kế hoạch này dựa trên
+[tài liệu quy trình đặt phòng](reference/quy-trinh-dat-phong.pdf). File này chỉ
+quy định thứ tự phối hợp và kết quả bàn giao chung, không lặp hướng dẫn kỹ thuật:
 
-Tài liệu này chia rõ công việc Backend và Frontend sau khi module xác thực hoàn
-thành. Hai bên không chờ nhau viết xong toàn bộ; mỗi bước bắt đầu bằng việc chốt
-API contract, sau đó làm song song và tích hợp.
+- Công việc chi tiết của Backend: [`backend_guide.md`](backend_guide.md).
+- Công việc chi tiết của Frontend: [`frontend/README.md`](../frontend/README.md).
+- Request/response chính thức: [`api_contract.md`](api_contract.md).
 
-## Quy trình phối hợp áp dụng cho mọi bước
+## Nguyên tắc phối hợp
 
-1. Cùng đọc nghiệp vụ và thống nhất kết quả người dùng cần đạt được.
-2. Frontend liệt kê dữ liệu cần nhập, hiển thị và các trạng thái giao diện.
-3. Backend đề xuất URL, method, request, response và mã lỗi.
-4. Hai bên cập nhật `docs/api_contract.md` trước khi code.
-5. Frontend dùng mock JSON đúng contract; backend xây model/API/test trong app `booking`.
-6. Backend bàn giao endpoint cùng dữ liệu mẫu.
-7. Frontend thay mock bằng API thật và hai bên kiểm thử luồng hoàn chỉnh.
+1. Hai bên thống nhất nghiệp vụ và API trước khi code.
+2. Backend và Frontend làm song song dựa trên cùng API contract.
+3. Frontend dùng mock JSON trong khi Backend chưa bàn giao endpoint.
+4. Backend không thay đổi contract mà không thông báo.
+5. Mỗi giai đoạn chỉ hoàn thành khi một luồng tích hợp thật đã chạy được.
 
-## Bước 0 — Tích hợp xác thực hiện tại
+## Thứ tự triển khai
 
-### Backend
+| Giai đoạn | Backend bàn giao | Frontend bàn giao | Hoàn thành khi |
+| --- | --- | --- | --- |
+| 0. Xác thực | API đăng nhập, session, đổi mật khẩu, đăng xuất | Giao diện xác thực hoàn chỉnh | Đăng nhập lần đầu, đổi mật khẩu và đăng xuất chạy được |
+| 1. Phân quyền | Role trong session và kiểm tra quyền | Menu và màn hình theo role | Tài khoản chỉ thấy và gọi được chức năng được phép |
+| 2. Danh mục phòng | Model, API loại phòng/phòng và dữ liệu mẫu | Giao diện đọc danh mục | Frontend hiển thị dữ liệu thật từ Backend |
+| 3. Yêu cầu đặt phòng | API tạo, danh sách, chi tiết yêu cầu | Form và danh sách yêu cầu | Tạo được một yêu cầu hợp lệ từ giao diện |
+| 4. Kiểm tra phòng | Service và API availability | Giao diện chọn ngày, loại và số lượng | Kết quả trống phòng khớp dữ liệu Backend |
+| 5. Thỏa thuận | Trạng thái, phương án và danh sách chờ | Giao diện đề xuất, chờ hoặc từ chối | Lịch sử và trạng thái chuyển đúng quy tắc |
+| 6. Xác nhận | Transaction tạo phiếu và kiểm tra lại tồn phòng | Màn hình tổng hợp và xác nhận | Sinh được mã phiếu, không tạo trùng |
+| 7. Sửa/hủy | API chi tiết, sửa và hủy có lịch sử | Màn hình tra cứu, sửa và hủy | Hủy giải phóng phòng nhưng không mất lịch sử |
+| 8. Bàn giao/báo cáo | API khách đến/đi và số liệu theo ngày | Dashboard hoặc bảng báo cáo | Dữ liệu nghiệp vụ khớp giữa hai phía |
 
-- Chạy đủ 5 API xác thực hiện có.
-- Cấu hình đúng frontend origin trong CORS và CSRF.
-- Tạo tài khoản nhân viên thử; Backend tự tạo `EmployeeProfile` dùng để tích hợp.
-- Gửi frontend base URL, tài khoản thử và `api_contract.md`.
+## Nhịp làm việc cho mỗi giai đoạn
 
-### Frontend
+### Trước khi code
 
-- Hoàn thiện trang đăng nhập, đổi mật khẩu và nút đăng xuất hiện có.
-- Gọi `/api/session/` trước khi hiển thị trang riêng tư.
-- Gửi cookie bằng `credentials: "include"` và CSRF token cho POST.
-- Xử lý HTTP 400, 401, 403 và trạng thái backend không kết nối được.
+- Frontend liệt kê trường nhập, dữ liệu hiển thị và trạng thái giao diện.
+- Backend đề xuất endpoint, method, request, response và mã lỗi.
+- Hai bên cập nhật `api_contract.md`.
 
-### Hoàn thành khi
+### Trong khi code
 
-Người dùng có thể đăng nhập, bị chuyển sang đổi mật khẩu nếu cần, vẫn giữ phiên
-sau khi đổi, mở lại trang vẫn nhận đúng session và đăng xuất được.
+- Backend làm model, migration, service, API và test.
+- Frontend dùng response mẫu đúng contract để xây giao diện.
+- Mỗi bên làm trên nhánh riêng theo `git_workflow.md`.
 
-## Bước 1 — Khung ứng dụng và phân quyền
+### Khi tích hợp
 
-### Backend
+- Backend gửi base URL, migration, tài khoản và dữ liệu thử.
+- Frontend thay mock bằng API thật.
+- Khi lỗi, Frontend gửi URL, method, body, HTTP status và response từ Network.
+- Backend sửa hành vi hoặc hai bên cập nhật contract nếu nghiệp vụ thay đổi.
 
-- Chốt các vai trò: quản trị viên, nhân viên đặt phòng, lễ tân.
-- Bổ sung role/permission vào thông tin session hoặc một endpoint hồ sơ nhân viên.
-- Kiểm tra quyền tại mọi endpoint nghiệp vụ, không chỉ ẩn nút ở frontend.
-- Viết test 401 khi chưa đăng nhập và 403 khi thiếu quyền.
+### Trước khi merge
 
-### Frontend
+- Backend chạy toàn bộ test.
+- Frontend kiểm tra loading, empty, error và success.
+- Hai bên chạy ít nhất một luồng từ giao diện tới database.
+- Pull request ghi rõ thay đổi ảnh hưởng đến bên còn lại.
 
-- Tạo layout chung: header, menu, tên nhân viên và đăng xuất.
-- Hiển thị menu theo quyền backend trả về.
-- Có trang 403 hoặc thông báo không đủ quyền.
-- Không lưu quyền tự đặt trong `localStorage`.
+## Phạm vi ưu tiên trong 3–4 tuần
 
-### API cần chốt
+Mức tối thiểu nên hoàn thành:
 
-- Có mở rộng `GET /api/session/` hay tạo `GET /api/me/`.
-- Cấu trúc `roles` hoặc `permissions`.
-- Quy tắc điều hướng khi không có quyền.
+1. Xác thực và phân quyền cơ bản.
+2. Loại phòng và phòng.
+3. Tạo, xem yêu cầu đặt phòng.
+4. Kiểm tra phòng trống.
+5. Xác nhận, xem và hủy phiếu đặt.
 
-## Bước 2 — Danh mục loại phòng và phòng
-
-### Backend
-
-- Thiết kế model loại phòng: mã, tên, sức chứa, giá cơ bản, trạng thái.
-- Thiết kế model phòng: số phòng, loại phòng, trạng thái hoạt động.
-- Cung cấp API đọc danh mục cho form đặt phòng.
-- Nếu quản trị qua giao diện riêng, cung cấp API thêm/sửa/ngừng hoạt động.
-- Tạo migration, Django Admin, dữ liệu mẫu và test validation.
-
-### Frontend
-
-- Làm màn hình danh sách loại phòng/phòng nếu nằm trong phạm vi quản trị.
-- Làm select loại phòng tái sử dụng trong các form sau.
-- Hiển thị loading, danh sách rỗng và lỗi tải dữ liệu.
-- Không hard-code loại phòng hoặc giá trong JavaScript.
-
-### API cần chốt
-
-- `GET /api/booking/room-types/` và cấu trúc từng loại phòng.
-- API phòng nếu frontend cần hiển thị phòng cụ thể.
-- Quyền nào được thay đổi danh mục.
-
-## Bước 3 — Tiếp nhận yêu cầu đặt phòng
-
-### Backend
-
-- Thiết kế yêu cầu đặt phòng và các dòng loại phòng/số lượng.
-- Lưu người tiếp nhận, thời điểm, khách lẻ/đoàn, liên hệ, kỳ lưu trú, nguồn đặt,
-  thanh toán, loại đảm bảo và yêu cầu đặc biệt.
-- Sinh mã yêu cầu duy nhất.
-- Kiểm tra ngày đi sau ngày đến, số khách và số lượng phòng hợp lệ.
-- Cung cấp API tạo, xem danh sách và xem chi tiết yêu cầu.
-
-### Frontend
-
-- Làm form theo các trường đã chốt; chia nhóm để nhân viên dễ nhập.
-- Làm danh sách, tìm kiếm và trang chi tiết.
-- Giữ dữ liệu người dùng đã nhập khi API báo lỗi.
-- Chặn gửi lặp trong lúc request đang xử lý.
-
-### API cần chốt
-
-- Request body tạo yêu cầu.
-- Response chứa `id`, mã yêu cầu và trạng thái ban đầu.
-- Phân trang, tìm kiếm và bộ lọc của danh sách.
-
-## Bước 4 — Kiểm tra khả năng đáp ứng
-
-### Backend
-
-- Xây service tính số phòng còn bán cho mọi đêm từ ngày đến đến trước ngày đi.
-- Trừ phòng ngừng hoạt động và các phiếu đặt đã chiếm sức chứa.
-- Không nhận overbooking trong phiên bản đầu.
-- Viết test cho chồng ngày, ngày đi trùng ngày đến và nhiều loại phòng.
-
-### Frontend
-
-- Gửi ngày đến/ngày đi và hiển thị tồn phòng từng loại.
-- Đánh dấu phương án đủ hoặc thiếu phòng.
-- Cho phép nhân viên đổi ngày, loại hoặc số lượng rồi kiểm tra lại.
-- Không tự tính tồn phòng từ dữ liệu cũ trên trình duyệt.
-
-### API cần chốt
-
-- Endpoint kiểm tra phòng và input tối thiểu.
-- Giá trị `total_rooms`, `reserved_rooms`, `available_rooms`.
-- HTTP 409 khi dữ liệu thay đổi trước lúc xác nhận.
-
-## Bước 5 — Thỏa thuận và danh sách chờ
-
-### Backend
-
-- Lưu lịch sử các phương án đã đề xuất: loại phòng, số lượng, giá và dịch vụ.
-- Hỗ trợ kết quả đang thỏa thuận, danh sách chờ hoặc từ chối.
-- Ghi nhân viên, thời điểm và lý do.
-- Kiểm tra lại tồn phòng trước khi chấp nhận phương án.
-
-### Frontend
-
-- Hiển thị phương án để nhân viên trao đổi với khách.
-- Cho nhập giá thỏa thuận, dịch vụ kèm theo và ghi chú.
-- Có thao tác đưa vào danh sách chờ hoặc từ chối kèm xác nhận.
-- Hiển thị lịch sử theo thứ tự thời gian.
-
-### API cần chốt
-
-- Endpoint tạo kết quả thỏa thuận.
-- Danh sách trạng thái hợp lệ và quy tắc chuyển trạng thái.
-- Response khi phòng vừa hết.
-
-## Bước 6 — Tạo và xác nhận phiếu đặt phòng
-
-### Backend
-
-- Chuyển yêu cầu/phương án thành phiếu đặt chính thức trong transaction.
-- Kiểm tra tồn phòng lần cuối và ngăn tạo trùng khi frontend retry.
-- Lưu giá tại thời điểm đặt, loại đảm bảo, thanh toán và mã phiếu.
-- Phiếu xác nhận mới bắt đầu chiếm sức chứa.
-
-### Frontend
-
-- Hiển thị màn hình tổng hợp trước khi xác nhận.
-- Cho nhân viên kiểm tra khách, phòng, giá và kỳ lưu trú.
-- Xử lý HTTP 409 bằng cách đưa người dùng trở lại bước kiểm tra phòng.
-- Hiển thị mã phiếu sau khi thành công; không gửi lại khi tải lại trang.
-
-### API cần chốt
-
-- Endpoint xác nhận từ `request_id` hoặc `negotiation_id`.
-- Idempotency hoặc quy tắc ngăn phiếu trùng.
-- Response tổng tiền, mã phiếu và trạng thái.
-
-## Bước 7 — Khẳng định, sửa và hủy
-
-### Backend
-
-- Lưu lần liên hệ xác nhận: kênh, thời điểm, nhân viên và nội dung.
-- Cho sửa kỳ lưu trú/phòng sau khi kiểm tra tồn phòng mới.
-- Cho hủy, giải phóng sức chứa nhưng không xóa lịch sử.
-- Lưu người yêu cầu, lý do và phí hủy nếu có.
-
-### Frontend
-
-- Làm chi tiết phiếu và lịch sử liên hệ.
-- Làm form sửa/hủy với bước xác nhận rõ ràng.
-- Hiển thị phiếu có thể in.
-- Thông báo khi sửa không thể đáp ứng và giữ dữ liệu cũ.
-
-### API cần chốt
-
-- API chi tiết, sửa, hủy và ghi nhận liên hệ.
-- Quy tắc optimistic locking hoặc xử lý hai nhân viên sửa cùng lúc.
-- Các trạng thái cuối và thao tác được phép ở mỗi trạng thái.
-
-## Bước 8 — Bàn giao lễ tân và báo cáo
-
-### Backend
-
-- Tổng hợp khách đến/đi theo ngày, sửa/hủy, không đến, ở thêm và đi sớm.
-- Cung cấp báo cáo mật độ phòng theo khoảng thời gian.
-- Phân quyền dữ liệu cho lễ tân và quản lý.
-
-### Frontend
-
-- Làm dashboard trong ngày và bộ lọc ngày.
-- Hiển thị danh sách có thể in/xuất theo yêu cầu đồ án.
-- Cho cập nhật trạng thái thực tế với xác nhận thao tác.
-- Có empty state và thông báo dữ liệu được cập nhật lúc nào.
-
-### API cần chốt
-
-- Endpoint arrivals/departures theo ngày.
-- Endpoint báo cáo và định dạng dữ liệu biểu đồ/bảng.
-- Có cần xuất CSV/PDF từ backend hay frontend hay không.
-
-## Mẫu bàn giao giữa hai bên
-
-Backend báo frontend:
-
-```text
-Endpoint: POST /api/example/
-Trạng thái: sẵn sàng tích hợp
-Auth/quyền: session + booking.add_x
-Request mẫu: {...}
-Response 200/201: {...}
-Các lỗi: 400, 401, 403, 404, 409
-Dữ liệu test: ...
-Contract đã cập nhật tại: docs/api_contract.md
-```
-
-Frontend báo backend:
-
-```text
-Màn hình: ...
-Hành động người dùng: ...
-Dữ liệu cần nhập/hiển thị: ...
-Trạng thái UI cần xử lý: loading, empty, error, success
-Endpoint còn thiếu hoặc trường cần bổ sung: ...
-Origin phát triển: ...
-```
-
-Chỉ chuyển sang bước tiếp theo khi contract của bước hiện tại đã được cập nhật,
-backend có test và frontend đã chạy được ít nhất một luồng tích hợp hoàn chỉnh.
+Thỏa thuận nâng cao, danh sách chờ và báo cáo triển khai sau nếu còn thời gian.
+Không mở rộng chức năng trước khi luồng tối thiểu hoạt động ổn định.
 

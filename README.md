@@ -18,8 +18,8 @@ Chưa bao gồm nghiệp vụ phòng hoặc đặt phòng.
 
 - [Quy trình đặt phòng](docs/reference/quy-trinh-dat-phong.pdf): bản tài liệu
   nghiệp vụ dùng cho dự án, đã bỏ trang bìa đầu tiên.
-- [Lộ trình triển khai sau xác thực](docs/next_steps_after_auth.md): phân chia
-  công việc cụ thể giữa Backend và Frontend.
+- [Kế hoạch phối hợp sau xác thực](docs/next_steps_after_auth.md): thứ tự triển
+  khai và mốc bàn giao chung giữa Backend và Frontend.
 
 ## Cấu trúc
 

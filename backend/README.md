@@ -194,10 +194,10 @@ thay đổi.
 
 ## 12. Tài liệu liên quan
 
-- [`frontend/README.md`](../frontend/README.md): hướng dẫn frontend làm phần xác thực.
+- [`frontend/README.md`](../frontend/README.md): công việc Frontend từ xác thực đến đặt phòng.
 - [`api_contract.md`](../docs/api_contract.md): request/response chính thức.
-- [`backend_guide.md`](../docs/backend_guide.md): quy trình phát triển và bàn giao Backend.
+- [`backend_guide.md`](../docs/backend_guide.md): kế hoạch triển khai nghiệp vụ Backend.
 - [`git_workflow.md`](../docs/git_workflow.md): quy tắc nhánh, commit và phối hợp Git.
 - [`huong_dan_chay_du_an.md`](../docs/huong_dan_chay_du_an.md): cách cài và chạy dự án.
-- [`next_steps_after_auth.md`](../docs/next_steps_after_auth.md): công việc sau xác thực.
+- [`next_steps_after_auth.md`](../docs/next_steps_after_auth.md): mốc phối hợp chung sau xác thực.
 

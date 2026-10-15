@@ -1,80 +1,213 @@
-# Hướng dẫn làm việc cho Backend
+# Kế hoạch phát triển Backend sau xác thực
 
-Tài liệu này hướng dẫn quy trình phát triển và bàn giao của thành viên Backend.
-Phần giải thích chi tiết cấu trúc module xác thực nằm trong
-[`backend/README.md`](../backend/README.md); request và response dùng để phối hợp
-với Frontend nằm trong [`api_contract.md`](api_contract.md).
+Tài liệu này chỉ mô tả công việc của Backend. Công việc Frontend nằm trong
+[`frontend/README.md`](../frontend/README.md); thứ tự phối hợp và mốc bàn giao
+chung nằm trong [`next_steps_after_auth.md`](next_steps_after_auth.md).
 
-## 1. Phạm vi hiện tại
+Backend tiếp tục phát triển trong app `booking`. Module `authentication` chỉ
+chịu trách nhiệm tài khoản, session, đổi mật khẩu và bảo vệ API.
 
-Backend được chia thành hai Django app:
+## Nguyên tắc triển khai
 
-- `authentication`: đăng nhập, đăng xuất, session, CSRF và đổi mật khẩu.
-- `booking`: nghiệp vụ phòng và đặt phòng sau khi xác thực.
+Mỗi chức năng Backend thực hiện theo thứ tự:
 
-Không đặt model hoặc API đặt phòng vào `authentication`. Các API xác thực dùng
-prefix `/api/`; các API nghiệp vụ mới dùng prefix `/api/booking/`.
+1. Đọc nghiệp vụ trong PDF và xác định dữ liệu cần lưu.
+2. Thống nhất request/response với Frontend trong `api_contract.md`.
+3. Tạo hoặc sửa model, sau đó tạo migration mới.
+4. Đặt quy tắc nghiệp vụ trong service; view chỉ đọc request và trả response.
+5. Kiểm tra session, trạng thái đổi mật khẩu và quyền.
+6. Viết test cho thành công, dữ liệu sai, chưa đăng nhập và xung đột nghiệp vụ.
+7. Chuẩn bị dữ liệu thử và bàn giao endpoint cho Frontend.
 
-## 2. Quy trình phát triển một chức năng
+Không sửa migration đã được chia sẻ. Không đổi endpoint hoặc tên trường mà chưa
+cập nhật API contract.
 
-1. Đọc yêu cầu nghiệp vụ và xác định người dùng, dữ liệu đầu vào, kết quả đầu ra.
-2. Thống nhất với Frontend URL, HTTP method, request, response và mã lỗi.
-3. Cập nhật [`api_contract.md`](api_contract.md) trước khi hai bên viết code.
-4. Thiết kế hoặc sửa model trong đúng Django app.
-5. Tạo migration nếu schema thay đổi; không sửa migration đã được dùng chung.
-6. Viết view, URL và kiểm tra quyền ở Backend.
-7. Viết test cho luồng thành công, dữ liệu sai, chưa đăng nhập và thiếu quyền.
-8. Chạy kiểm tra, chuẩn bị dữ liệu mẫu rồi bàn giao endpoint cho Frontend.
+## Cấu trúc đề xuất cho app booking
 
-## 3. Quy tắc API
-
-- Nhận và trả dữ liệu JSON, trừ endpoint không cần body.
-- Trả cấu trúc lỗi thống nhất gồm `status`, `code` và `message`.
-- Dùng đúng HTTP status: `400` cho dữ liệu sai, `401` cho chưa xác thực, `403`
-  cho không đủ quyền và `405` cho sai method.
-- Backend luôn kiểm tra lại dữ liệu; không phụ thuộc validation ở trình duyệt.
-- Không trả mật khẩu, password hash, session key hoặc stack trace cho Frontend.
-- Không đổi URL hoặc tên trường đã thống nhất mà chưa cập nhật API contract.
-- Trả mã lỗi ổn định trong trường `code`; không yêu cầu Frontend phân tích
-  nội dung tiếng Việt trong `message`.
-- Mọi API `/api/booking/` phải đi qua kiểm tra session và trạng thái đổi mật khẩu.
-
-## 4. Tài khoản dùng để tích hợp
-
-Sau khi chạy migration, tạo tài khoản thử trong Django Admin hoặc shell:
-
-```powershell
-cd backend
-.\venv\Scripts\python.exe manage.py shell
+```text
+backend/booking/
+├── models/
+│   ├── room.py
+│   ├── customer.py
+│   ├── booking.py
+│   └── negotiation.py
+├── services/
+│   ├── availability.py
+│   ├── booking_service.py
+│   └── pricing.py
+├── views/
+│   ├── room_views.py
+│   ├── booking_views.py
+│   └── report_views.py
+├── tests/
+│   ├── test_rooms.py
+│   ├── test_availability.py
+│   └── test_bookings.py
+├── admin.py
+└── urls.py
 ```
 
-```python
-from django.contrib.auth.models import User
+Có thể bắt đầu bằng các file đơn hiện tại rồi tách thành package khi code lớn hơn.
+Không cần tạo toàn bộ cấu trúc ngay từ đầu.
 
-user = User.objects.create_user(username='nv01', password='mat-khau-ban-dau')
+## Giai đoạn 1 — Vai trò nhân viên
+
+### Backend làm
+
+- Thêm `role` vào `EmployeeProfile`.
+- Bắt đầu với ba vai trò: `admin`, `booking_staff`, `receptionist`.
+- Trả `role` trong `GET /api/session/`.
+- Tạo hàm hoặc decorator kiểm tra quyền cho API nghiệp vụ.
+- Viết migration và test HTTP 403 khi tài khoản không đủ quyền.
+
+### API cần cập nhật
+
+```json
+{
+  "status": "success",
+  "username": "nv01",
+  "display_name": "Nguyễn Văn A",
+  "role": "booking_staff",
+  "must_change_password": false
+}
 ```
 
-Signal của module `authentication` tự tạo `EmployeeProfile` với
-`must_change_password=True`. Không cần tạo profile thủ công. Tài khoản tạo bằng
-`createsuperuser` nhận `must_change_password=False`.
+### Bàn giao cho Frontend
 
-Chỉ gửi tài khoản thử qua kênh làm việc của nhóm. Không commit mật khẩu thật hoặc
-dữ liệu bí mật vào repository.
+- Danh sách role chính thức.
+- Quyền của từng role.
+- Response session mới và tài khoản thử cho mỗi role.
 
-## 5. Phối hợp với Frontend
+## Giai đoạn 2 — Danh mục loại phòng và phòng
 
-Backend cần bàn giao:
+### Model tối thiểu
 
-- Base URL và origin Frontend đã được cấu hình CORS/CSRF.
-- Endpoint, method, request, response và các HTTP status có thể xuất hiện.
-- Tài khoản cùng dữ liệu mẫu để kiểm thử.
-- Thay đổi API contract và migration mới nếu có.
+`RoomType`:
 
-Khi Frontend báo lỗi, yêu cầu cung cấp URL, method, request body, HTTP status và
-response trong Network. Kiểm tra lần lượt backend đang chạy, origin được cho phép,
-`credentials: "include"`, `X-CSRFToken` cho POST và session cookie.
+- `code`, `name`, `capacity`, `base_price`, `is_active`.
 
-## 6. Kiểm tra trước khi commit
+`Room`:
+
+- `room_number`, `room_type`, `status`.
+
+Trạng thái vận hành phòng chỉ cần `available`, `maintenance`, `inactive`.
+Tình trạng trống theo ngày được tính bởi service, không lưu trực tiếp vào
+`Room.status`.
+
+### API đề xuất
+
+```text
+GET /api/booking/room-types/
+GET /api/booking/rooms/
+```
+
+Nếu quản trị danh mục qua Django Admin thì giai đoạn đầu chưa cần API thêm, sửa,
+xóa cho Frontend.
+
+### Test bắt buộc
+
+- Mã loại phòng và số phòng không trùng.
+- Giá và sức chứa hợp lệ.
+- Phòng liên kết đúng loại phòng.
+- Tài khoản chưa đăng nhập hoặc chưa đổi mật khẩu không truy cập được.
+
+## Giai đoạn 3 — Tiếp nhận yêu cầu đặt phòng
+
+### Model tối thiểu
+
+- `Customer`: họ tên, điện thoại, email và ghi chú.
+- `BookingRequest`: khách hàng, ngày đến, ngày đi, số khách, trạng thái, người tạo.
+- `BookingRequestItem`: loại phòng và số lượng yêu cầu.
+
+### API đề xuất
+
+```text
+POST /api/booking/requests/
+GET  /api/booking/requests/
+GET  /api/booking/requests/<id>/
+```
+
+### Validation bắt buộc
+
+- Ngày đi phải sau ngày đến.
+- Số khách và số lượng phòng phải lớn hơn 0.
+- Loại phòng phải đang hoạt động.
+- Lưu `created_by` từ session; không nhận ID nhân viên do Frontend tự gửi.
+
+## Giai đoạn 4 — Kiểm tra phòng trống
+
+Tạo service `availability.py` để tính số phòng còn trống cho từng đêm. Service
+phải loại trừ phòng bảo trì và các phiếu đã xác nhận có khoảng ngày giao nhau.
+
+API đề xuất:
+
+```text
+GET /api/booking/availability/?check_in=...&check_out=...&room_type=...
+```
+
+Không để view hoặc Frontend tự tính tồn phòng. Viết test cho khoảng ngày chồng
+nhau, ngày trả trùng ngày nhận tiếp theo và nhiều loại phòng.
+
+## Giai đoạn 5 — Thỏa thuận và danh sách chờ
+
+Backend lưu phương án đã đề xuất, giá, ghi chú, nhân viên và thời gian. Trạng thái
+tối thiểu:
+
+```text
+pending → negotiating → waiting
+                     ↘ rejected
+```
+
+Mỗi lần chuyển trạng thái phải được service kiểm tra. Frontend không được gửi một
+trạng thái tùy ý để Backend lưu trực tiếp.
+
+## Giai đoạn 6 — Xác nhận đặt phòng
+
+Tạo phiếu đặt chính thức trong `transaction.atomic()`:
+
+1. Khóa hoặc kiểm tra lại dữ liệu tồn phòng.
+2. Ngăn tạo phiếu trùng khi Frontend gửi lại request.
+3. Lưu giá tại thời điểm xác nhận.
+4. Sinh mã phiếu duy nhất.
+5. Chuyển trạng thái sang `confirmed`.
+
+Nếu phòng vừa hết, trả HTTP 409 để Frontend quay lại bước kiểm tra khả năng đáp ứng.
+
+## Giai đoạn 7 — Xem, sửa và hủy
+
+API đề xuất:
+
+```text
+GET   /api/booking/reservations/
+GET   /api/booking/reservations/<id>/
+PATCH /api/booking/reservations/<id>/
+POST  /api/booking/reservations/<id>/cancel/
+```
+
+Không xóa bản ghi đã phát sinh nghiệp vụ. Khi hủy, lưu người thực hiện, thời gian,
+lý do và giải phóng sức chứa.
+
+## Giai đoạn 8 — Bàn giao lễ tân và báo cáo
+
+Chỉ triển khai sau khi luồng đặt phòng chính hoạt động. Backend cung cấp danh sách
+khách đến, khách đi và số liệu phòng theo ngày. Chốt trước với Frontend định dạng
+bảng hoặc biểu đồ; chưa cần xuất PDF/CSV nếu đồ án không yêu cầu.
+
+## Làm song song với Frontend
+
+Trong mỗi giai đoạn:
+
+1. Backend và Frontend chốt contract.
+2. Backend viết model, service, API và test.
+3. Frontend dùng JSON mẫu để làm giao diện.
+4. Backend gửi endpoint cùng dữ liệu thử.
+5. Frontend thay mock bằng API thật.
+6. Hai bên kiểm thử một luồng hoàn chỉnh trước khi merge.
+
+Backend không cần chờ Frontend hoàn thiện giao diện của giai đoạn trước. Backend
+chỉ cần chờ khi request/response hoặc quy tắc nghiệp vụ chưa được thống nhất.
+
+## Kiểm tra trước khi bàn giao
 
 ```powershell
 cd backend
@@ -83,7 +216,12 @@ cd backend
 .\venv\Scripts\python.exe manage.py test
 ```
 
-Chỉ bàn giao khi migration chạy được, test đạt và hành vi thực tế khớp với API
-contract. Với công việc tiếp theo, làm theo phân chia Backend/Frontend trong
-[`next_steps_after_auth.md`](next_steps_after_auth.md).
+Backend bàn giao cho Frontend:
+
+- Endpoint và method.
+- Request/response mẫu.
+- Mã lỗi và HTTP status.
+- Migration cần chạy.
+- Tài khoản, role và dữ liệu thử.
+- Commit hoặc pull request chứa thay đổi.
 

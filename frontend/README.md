@@ -185,6 +185,63 @@ Middleware Backend chặn toàn bộ `/api/booking/`:
 - Đăng xuất xong không truy cập lại được trang riêng tư.
 - Lỗi mất kết nối không làm giao diện bị khóa.
 
+## Các bước Frontend tiếp theo sau xác thực
+
+Frontend không cần chờ Backend hoàn thành toàn bộ nghiệp vụ. Sau khi hai bên chốt
+contract của từng giai đoạn, Frontend dùng mock JSON đúng cấu trúc để làm song song.
+
+### 1. Tạo khung ứng dụng và phân quyền
+
+- Tạo header, menu, tên nhân viên và nút đăng xuất dùng chung.
+- Đọc `role` từ session khi Backend bổ sung trường này.
+- Hiển thị menu theo quyền và có trang thông báo không đủ quyền.
+- Không tự đặt role hoặc permission trong `localStorage`.
+
+### 2. Hiển thị loại phòng và phòng
+
+- Làm danh sách loại phòng và phòng từ API Backend.
+- Tạo component/select loại phòng để dùng lại trong form đặt phòng.
+- Có trạng thái loading, danh sách rỗng và tải thất bại.
+- Không hard-code tên loại phòng, giá hoặc sức chứa trong JavaScript.
+
+### 3. Làm form yêu cầu đặt phòng
+
+- Nhập thông tin khách, ngày đến, ngày đi, số khách và loại phòng.
+- Giữ dữ liệu đã nhập khi Backend trả lỗi validation.
+- Khóa nút trong lúc gửi để tránh tạo yêu cầu trùng.
+- Làm trang danh sách và chi tiết yêu cầu sau khi API tương ứng sẵn sàng.
+
+### 4. Làm màn hình kiểm tra phòng trống
+
+- Gửi ngày và loại phòng tới API availability.
+- Hiển thị số phòng còn lại do Backend trả về.
+- Cho nhân viên thay đổi ngày, loại hoặc số lượng rồi kiểm tra lại.
+- Không tự tính tồn phòng từ dữ liệu cũ trên trình duyệt.
+
+### 5. Thỏa thuận và xác nhận
+
+- Hiển thị phương án phòng, giá và dịch vụ Backend trả về.
+- Có thao tác danh sách chờ hoặc từ chối khi contract đã được chốt.
+- Trước khi xác nhận, hiển thị trang tổng hợp để nhân viên kiểm tra.
+- Xử lý HTTP 409 bằng cách quay lại bước kiểm tra phòng.
+
+### 6. Xem, sửa và hủy phiếu
+
+- Làm danh sách có tìm kiếm và bộ lọc trạng thái.
+- Làm trang chi tiết và lịch sử xử lý.
+- Form sửa/hủy phải có bước xác nhận rõ ràng.
+- Khi API báo xung đột, giữ dữ liệu đang nhập và hướng dẫn người dùng tải lại.
+
+### 7. Bàn giao lễ tân và báo cáo
+
+- Làm bảng khách đến, khách đi theo ngày.
+- Hiển thị empty state và thời điểm dữ liệu được cập nhật.
+- Chỉ làm biểu đồ hoặc xuất file khi nhóm đã chốt yêu cầu và định dạng API.
+
+Thứ tự và mốc tích hợp chung nằm trong
+[`next_steps_after_auth.md`](../docs/next_steps_after_auth.md). Frontend chỉ bắt đầu
+gọi endpoint thật sau khi endpoint đó xuất hiện trong `api_contract.md`.
+
 Cách chạy hai phía nằm tại
 [`huong_dan_chay_du_an.md`](../docs/huong_dan_chay_du_an.md). Quy tắc làm việc
 với Git nằm tại [`git_workflow.md`](../docs/git_workflow.md).
