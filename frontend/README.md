@@ -1,8 +1,8 @@
-# Hướng dẫn Frontend xây dựng phần đăng nhập
+# Hướng dẫn Frontend hoàn thiện luồng đăng nhập
 
-Phần frontend chưa được triển khai. Thành viên frontend dùng tài liệu này để tự
-xây dựng giao diện đăng nhập, đổi mật khẩu và tích hợp với Django API. Có thể dùng
-HTML/CSS/JavaScript thuần, React hoặc Vue; API không phụ thuộc framework.
+Thư mục `frontend/` đã có bản HTML/JavaScript cơ bản. Frontend cần hoàn thiện luồng
+dưới đây mà không cần đổi sang framework khác. API chính thức được mô tả trong
+[`api_contract.md`](../docs/api_contract.md).
 
 Backend phát triển mặc định tại:
 
@@ -18,6 +18,66 @@ http://127.0.0.1:5501
 ```
 
 Không trộn `localhost` với `127.0.0.1`, vì cookie phiên có thể không được gửi.
+
+## Luồng điều hướng bắt buộc
+
+```text
+Mở login.html
+├── session hợp lệ, phải đổi mật khẩu → change-password.html
+├── session hợp lệ, đã đổi mật khẩu  → index.html
+└── chưa đăng nhập                   → hiển thị form đăng nhập
+
+Đăng nhập thành công
+├── must_change_password = true      → change-password.html
+└── must_change_password = false     → index.html
+```
+
+Frontend phải coi `GET /api/session/` là nguồn xác nhận trạng thái đăng nhập;
+không dùng `localStorage` để tự ghi rằng người dùng đã đăng nhập.
+
+## Những việc Frontend cần làm
+
+### 1. Hoàn thiện `api.js`
+
+- Luôn gửi `credentials: "include"`.
+- Tự lấy và gửi `X-CSRFToken` cho POST.
+- Bọc `response.json()` trong `try/catch` vì response lỗi có thể không phải JSON.
+- Trả lỗi kết nối thống nhất để mọi trang cùng hiển thị được.
+- Dùng `data.code` cho điều hướng và `data.message` để hiển thị.
+
+### 2. Hoàn thiện `login.html`
+
+- Gọi `/api/session/` khi mở trang; người đã đăng nhập không cần thấy lại form.
+- Khóa nút và hiển thị “Đang đăng nhập…” trong lúc gửi.
+- Có `try/catch/finally` để lỗi mạng không làm nút bị khóa.
+- Điều hướng theo `must_change_password` sau khi đăng nhập.
+- Thêm `label`, `autocomplete="username"` và `autocomplete="current-password"`.
+
+### 3. Hoàn thiện `change-password.html`
+
+- Gọi `/api/session/` trước khi hiển thị form.
+- HTTP 401 chuyển về `login.html`.
+- Nếu `must_change_password=false`, chuyển tới `index.html`.
+- Kiểm tra hai ô khớp nhau trước khi gửi, nhưng vẫn hiển thị lỗi Backend trả về.
+- Có loading, xử lý lỗi mạng và mở lại nút khi thất bại.
+- Không dùng `alert()`; hiển thị thông báo ngay trong trang.
+
+### 4. Hoàn thiện `index.html`
+
+- Gọi `/api/session/` trước khi hiển thị nội dung.
+- Dùng `display_name` để chào nhân viên; `username` là mã đăng nhập.
+- HTTP 401 chuyển về trang đăng nhập.
+- `PASSWORD_CHANGE_REQUIRED` hoặc `must_change_password=true` chuyển tới trang
+  đổi mật khẩu.
+- Khi đăng xuất thất bại, hiển thị lỗi và mở lại nút để người dùng thử lại.
+
+### 5. Giao diện tối thiểu
+
+- Tạo một file CSS dùng chung, form căn giữa và hiển thị tốt trên điện thoại.
+- Thông báo lỗi rõ ràng, không làm tải lại cả trang.
+- Nút có trạng thái mặc định, đang xử lý và bị vô hiệu hóa.
+- `change-password.html` và `index.html` cần đầy đủ `DOCTYPE`, `head`, charset và
+  viewport như `login.html`.
 
 ## Sản phẩm Frontend cần bàn giao
 
@@ -64,7 +124,7 @@ Mỗi khi mở trang cần đăng nhập, gọi `GET /api/session/`:
 
 - HTTP 401: chuyển về trang đăng nhập.
 - `must_change_password = true`: chuyển sang trang đổi mật khẩu.
-- Thành công: dùng `username` để hiển thị tên nhân viên.
+- Thành công: dùng `display_name` để hiển thị tên nhân viên.
 
 Không dùng `localStorage` làm bằng chứng đăng nhập. Backend xác định người dùng từ
 session cookie.
@@ -105,7 +165,16 @@ async function apiRequest(path, options = {}) {
     headers,
     credentials: 'include'
   });
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = {
+      status: 'error',
+      code: 'INVALID_RESPONSE',
+      message: 'Máy chủ trả về dữ liệu không hợp lệ.'
+    };
+  }
   return { response, data };
 }
 ```
@@ -135,7 +204,7 @@ if (!response.ok) {
 | 200 | Thao tác thành công |
 | 400 | Dữ liệu thiếu, sai định dạng hoặc mật khẩu không hợp lệ |
 | 401 | Sai tài khoản/mật khẩu hoặc session hết hạn |
-| 403 | Thiếu/sai CSRF token hoặc origin chưa được backend cho phép |
+| 403 | CSRF sai hoặc tài khoản chưa hoàn thành đổi mật khẩu |
 | 405 | Gọi sai HTTP method |
 | 500 | Báo lỗi hệ thống, không hiển thị stack trace |
 

@@ -10,9 +10,13 @@ header `X-CSRFToken` lấy từ endpoint CSRF.
 ```json
 {
   "status": "error",
+  "code": "ERROR_CODE",
   "message": "Nội dung lỗi có thể hiển thị cho người dùng."
 }
 ```
+
+Frontend dùng `code` để quyết định điều hướng và dùng `message` để hiển thị. Không
+so sánh trực tiếp nội dung tiếng Việt của `message`.
 
 ## 1. Lấy CSRF token
 
@@ -51,7 +55,8 @@ Response 200:
 ```json
 {
   "status": "success",
-  "username": "Nguyễn Văn A",
+  "username": "nv01",
+  "display_name": "Nguyễn Văn A",
   "must_change_password": true
 }
 ```
@@ -69,7 +74,8 @@ Response 200 giống phần thông tin người dùng của đăng nhập:
 ```json
 {
   "status": "success",
-  "username": "Nguyễn Văn A",
+  "username": "nv01",
+  "display_name": "Nguyễn Văn A",
   "must_change_password": false
 }
 ```
@@ -122,3 +128,25 @@ Response 200:
 ```
 
 HTTP 401 nếu phiên không hợp lệ. Sau thành công, frontend chuyển về trang đăng nhập.
+
+## 6. Quy tắc truy cập API đặt phòng
+
+Mọi endpoint dưới `/api/booking/` đều được Backend bảo vệ:
+
+- HTTP 401, `AUTHENTICATION_REQUIRED`: chưa đăng nhập hoặc session hết hạn.
+- HTTP 403, `PASSWORD_CHANGE_REQUIRED`: đã đăng nhập nhưng chưa đổi mật khẩu lần đầu.
+- Chỉ khi đã đăng nhập và `must_change_password=false`, request mới đi tiếp đến
+  API nghiệp vụ.
+
+## Mã lỗi xác thực
+
+| Code | HTTP | Ý nghĩa |
+| --- | --- | --- |
+| `INVALID_JSON` | 400 | Body không phải object JSON hợp lệ |
+| `REQUIRED_FIELDS` | 400 | Thiếu username hoặc password |
+| `PASSWORD_REQUIRED` | 400 | Mật khẩu mới bị trống |
+| `PASSWORD_MISMATCH` | 400 | Hai mật khẩu mới không khớp |
+| `INVALID_CREDENTIALS` | 401 | Username hoặc mật khẩu sai |
+| `AUTHENTICATION_REQUIRED` | 401 | Chưa đăng nhập hoặc session hết hạn |
+| `CSRF_FAILED` | 403 | CSRF token hoặc origin không hợp lệ |
+| `PASSWORD_CHANGE_REQUIRED` | 403 | Phải đổi mật khẩu trước khi dùng nghiệp vụ |
