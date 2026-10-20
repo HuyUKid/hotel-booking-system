@@ -1,85 +1,17 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập nhân viên</title>
-    <link rel="stylesheet" href="style.css"> <!-- Gắn CSS -->
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Đăng nhập · Đặt phòng</title><link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="container">
-        <h2>Đăng nhập</h2>
-        <form id="loginForm">
-            <!-- Thêm label và autocomplete theo yêu cầu -->
-            <div class="form-group">
-                <label for="username">Tên đăng nhập:</label>
-                <input type="text" id="username" autocomplete="username" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Mật khẩu:</label>
-                <input type="password" id="password" autocomplete="current-password" required>
-            </div>
-            
-            <!-- Vùng hiển thị lỗi (Không dùng alert) -->
-            <div id="errorMessage" class="error-msg" style="display: none;"></div>
-            
-            <button type="submit" id="loginBtn">Đăng nhập</button>
-        </form>
-    </div>
-
-    <script src="api.js"></script>
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('loginBtn');
-            const errorDiv = document.getElementById('errorMessage');
-            
-            // Khóa nút tạo trạng thái loading
-            btn.disabled = true;
-            btn.innerText = "Đang xử lý...";
-            errorDiv.style.display = 'none';
-
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            try {
-                const { response, data } = await apiRequest('/api/login/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-
-                if (!response.ok) { 
-                    // XỬ LÝ LỖI THEO MÃ CODE CỦA BACKEND
-                    if (data.code === 'INVALID_CREDENTIALS' || data.code === 'INVALID_JSON' || data.code === 'REQUIRED_FIELDS') {
-                        errorDiv.innerText = data.message;
-                        errorDiv.style.display = 'block';
-                    } else if (data.code === 'PASSWORD_CHANGE_REQUIRED') {
-                        window.location.href = '/change-password.html';
-                    } else if (data.code === 'CSRF_FAILED') {
-                        errorDiv.innerText = "Phiên làm việc lỗi. Vui lòng F5 tải lại trang.";
-                        errorDiv.style.display = 'block';
-                    } else {
-                        errorDiv.innerText = data.message || "Lỗi không xác định";
-                        errorDiv.style.display = 'block';
-                    }
-                } else {
-                    // Đăng nhập thành công, kiểm tra luồng điều hướng
-                    if (data.must_change_password) {
-                        window.location.href = '/change-password.html';
-                    } else {
-                        window.location.href = '/index.html';
-                    }
-                }
-            } catch (error) {
-                errorDiv.innerText = "Mất kết nối đến máy chủ.";
-                errorDiv.style.display = 'block';
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Đăng nhập";
-            }
-        });
-    </script>
-</body>
+<body><main class="auth"><div class="card">
+    <h1>Đăng nhập nhân viên</h1>
+    <p class="muted">Ứng dụng nội bộ quản lý đặt phòng.</p>
+    <p id="message" role="status">Đang kiểm tra phiên…</p>
+    <form id="loginForm" hidden>
+        <label>Tên đăng nhập<input name="username" autocomplete="username" required></label>
+        <label>Mật khẩu<input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Đăng nhập</button>
+    </form>
+</div></main><script src="api.js"></script><script src="auth.js"></script></body>
 </html>

@@ -1,180 +1,179 @@
-# Backend — module xác thực nhân viên
+# Backend — hướng dẫn làm theo quy trình đặt phòng
 
-Backend hiện triển khai phần xác thực nhân viên. Frontend được phát triển độc lập
-và giao tiếp với backend bằng HTTP/JSON theo
-[`api_contract.md`](../docs/api_contract.md).
+Backend dùng Django và SQLite, xử lý xác thực, dữ liệu và quy tắc đặt phòng.
+README này hướng dẫn đọc và tự phát triển bản demo hiện tại theo 8 bước trong
+[PDF nghiệp vụ](../docs/reference/quy-trinh-dat-phong.pdf).
 
-## 1. Chức năng hiện có
+Đăng nhập là phần chuẩn bị trước nghiệp vụ. Bản demo dùng một loại phòng cho mỗi
+phiếu; phạm vi giản lược được mô tả trong [sơ đồ demo](../docs/demo_walkthrough.md).
+Request/response đầy đủ lấy từ [API contract](../docs/api_contract.md).
 
-- Cấp CSRF token cho frontend.
-- Đăng nhập bằng username/password.
-- Tạo và duy trì Django session.
-- Kiểm tra phiên đăng nhập hiện tại.
-- Buộc nhân viên đổi mật khẩu lần đầu bằng `must_change_password`.
-- Đổi mật khẩu và giữ nguyên phiên sau khi đổi.
-- Đăng xuất và hủy phiên.
+## 1. Chạy Backend
 
-API đổi mật khẩu không kiểm tra độ mạnh. Mật khẩu mới chỉ cần không rỗng và khớp
-với ô xác nhận.
-
-## 2. Cấu trúc thư mục
-
-```text
-backend/
-├── manage.py
-├── requirements.txt
-├── config/
-│   ├── settings.py       # Django, database, session, CORS và CSRF
-│   ├── urls.py           # Router cấp dự án
-│   ├── asgi.py           # Entry point ASGI
-│   └── wsgi.py           # Entry point WSGI
-├── authentication/
-│   ├── models.py         # EmployeeProfile
-│   ├── views.py          # Xử lý API xác thực
-│   ├── urls.py           # Endpoint xác thực dưới /api/...
-│   ├── signals.py        # Tự tạo EmployeeProfile khi có User mới
-│   ├── middleware.py     # Bảo vệ các API /api/booking/
-│   ├── admin.py          # Quản lý EmployeeProfile trong Django Admin
-│   ├── tests.py          # Kiểm thử API xác thực
-│   └── migrations/       # Trạng thái schema của module xác thực
-└── booking/
-    ├── models.py         # Model đặt phòng sẽ phát triển tiếp
-    ├── views.py          # API đặt phòng sẽ phát triển tiếp
-    ├── urls.py           # URL có prefix /api/booking/
-    └── tests.py          # Test nghiệp vụ đặt phòng
-```
-
-`authentication` và `booking` là hai app Django độc lập. Khi API đặt phòng được
-phát triển, frontend sẽ gọi chúng dưới `/api/booking/`; app xác thực không chứa
-nghiệp vụ phòng.
-
-## 3. Dữ liệu xác thực
-
-Django cung cấp model `User`, chứa username, password hash, họ tên và quyền.
-Dự án bổ sung `EmployeeProfile`:
-
-```python
-class EmployeeProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    must_change_password = models.BooleanField(default=True)
-```
-
-Quan hệ `OneToOneField` bảo đảm một tài khoản có tối đa một profile. Khi xóa User,
-profile cũng bị xóa. Nếu profile tồn tại và cờ bằng `True`, frontend phải đưa người
-dùng đến màn hình đổi mật khẩu.
-
-Signal trong `authentication/signals.py` tự tạo profile khi có User mới. Tài khoản
-nhân viên nhận `must_change_password=True`; superuser nhận giá trị `False` để có
-thể vào trang quản trị ngay. Migration dữ liệu cũng bổ sung profile cho các User
-cũ còn thiếu.
-
-## 4. Luồng request
-
-```text
-Frontend
-  ↓ HTTP request + cookie/CSRF
-config/urls.py
-  ↓ include
-authentication/urls.py
-  ↓ chọn view theo URL và HTTP method
-authentication/views.py
-  ↓ Django Auth + EmployeeProfile
-Database/session
-  ↓
-JSON response + HTTP status
-```
-
-Ví dụ đăng nhập:
-
-1. Frontend gọi `GET /api/csrf/` để lấy CSRF token.
-2. Frontend gửi `POST /api/login/` với username, password và token.
-3. `authenticate()` kiểm tra mật khẩu đã băm trong database.
-4. `login()` tạo session và gửi session cookie về trình duyệt.
-5. Backend trả `username`, `display_name` và `must_change_password`.
-
-Backend không trả password, password hash hoặc session key trong JSON.
-
-## 5. Danh sách endpoint
-
-| Method | Endpoint | Chức năng |
-| --- | --- | --- |
-| GET | `/api/csrf/` | Cấp CSRF token |
-| GET | `/api/session/` | Trả người dùng đang đăng nhập |
-| POST | `/api/login/` | Đăng nhập và tạo session |
-| POST | `/api/change-password/` | Đổi mật khẩu và bỏ cờ bắt buộc đổi |
-| POST | `/api/logout/` | Hủy session |
-
-Request/response đầy đủ nằm trong
-[`api_contract.md`](../docs/api_contract.md).
-
-## 6. Trách nhiệm của Backend
-
-- Kiểm tra mọi dữ liệu nhận từ frontend và trả lỗi đúng API contract.
-- Quản lý tài khoản, mật khẩu băm, session và cờ `must_change_password`.
-- Cấu hình đúng origin của frontend trong `CORS_ALLOWED_ORIGINS` và
-  `CSRF_TRUSTED_ORIGINS`.
-- Giữ ổn định URL, tên trường và kiểu dữ liệu đã thống nhất với frontend.
-- Viết test cho cả luồng thành công, sai dữ liệu và chưa đăng nhập.
-
-Frontend chỉ gửi dữ liệu và hiển thị kết quả. Backend vẫn phải kiểm tra lại toàn
-bộ request, kể cả khi frontend đã validation.
-
-## 7. Vai trò của các hàm chính
-
-Trong `authentication/views.py`:
-
-- `_json_body()`: chuyển request body JSON thành dictionary; trả HTTP 400 nếu JSON lỗi.
-- `_must_change_password()`: kiểm tra cờ trên `EmployeeProfile`.
-- `_unauthorized()`: tạo response HTTP 401 thống nhất.
-- `api_csrf()`: tạo CSRF token và cookie.
-- `api_session()`: kiểm tra session cookie và trả thông tin người dùng.
-- `api_login()`: gọi `authenticate()` rồi `login()`.
-- `api_change_password()`: gọi `set_password()`, cập nhật profile và session hash.
-- `api_logout()`: gọi `logout()` để xóa phiên.
-
-Phải dùng `set_password()` khi đổi mật khẩu. Không gán trực tiếp vào
-`user.password`, vì Django cần băm mật khẩu đúng định dạng.
-
-## 8. CORS, CSRF và session
-
-- CORS xác định frontend origin nào được đọc response.
-- CSRF ngăn website khác lợi dụng cookie để gửi POST giả mạo.
-- Session cookie xác định người dùng đã đăng nhập.
-
-Frontend phải gửi `credentials: "include"`. Các request POST phải gửi
-`X-CSRFToken`. Origin frontend được cấu hình trong `config/settings.py`.
-
-`BookingAuthenticationMiddleware` bảo vệ toàn bộ `/api/booking/`: request chưa
-đăng nhập nhận HTTP 401; tài khoản còn `must_change_password=True` nhận HTTP 403.
-Vì vậy người dùng không thể bỏ qua màn hình đổi mật khẩu bằng cách gọi API trực tiếp.
-
-Response lỗi xác thực luôn có `status`, `code` và `message`. Frontend dùng `code`
-để xử lý chương trình và dùng `message` để hiển thị cho người dùng.
-
-## 9. Tạo tài khoản nhân viên thử nghiệm
-
-Có thể tạo tài khoản trong Django Admin hoặc bằng `python manage.py shell`:
-
-```python
-from django.contrib.auth.models import User
-user = User.objects.create_user(username='nv01', password='mat-khau-ban-dau')
-```
-
-Backend tự tạo `EmployeeProfile(must_change_password=True)`. Sau khi nhân viên
-đăng nhập, frontend chuyển tới màn hình đổi mật khẩu. `createsuperuser` cũng tự
-tạo profile nhưng không bắt buộc đổi mật khẩu.
-
-## 10. Chạy và kiểm thử
+Từ thư mục gốc dự án, lần đầu chạy:
 
 ```powershell
 cd backend
 python -m venv venv
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 .\venv\Scripts\python.exe manage.py migrate
+.\venv\Scripts\python.exe manage.py seed_demo
 .\venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
 ```
 
-Kiểm tra trước khi commit:
+Nếu đã có môi trường ảo thì bỏ hai lệnh tạo venv/cài thư viện khi không cần cài lại.
+Lệnh `seed_demo` tạo hai loại phòng và tài khoản `demo / demo123`. Khi chạy lại,
+lệnh giữ mật khẩu và dữ liệu đã có. Nhân viên demo phải đổi mật khẩu lần đầu.
+
+Muốn vào Django Admin, tạo tài khoản quản trị ở terminal khác:
+
+```powershell
+.\venv\Scripts\python.exe manage.py createsuperuser
+```
+
+Mở `http://127.0.0.1:8000/admin/`. Tài khoản nhân viên thông thường không có
+quyền vào Admin. Cách chạy cả hai phía nằm trong [hướng dẫn chạy](../docs/huong_dan_chay_du_an.md).
+
+## 2. Hiểu cấu trúc trước khi làm
+
+| File | Cần hiểu và sửa gì? |
+| --- | --- |
+| [config/settings.py](config/settings.py) | Database, ứng dụng, middleware, origin Frontend được phép |
+| [config/urls.py](config/urls.py) | Gắn URL xác thực và URL đặt phòng |
+| [authentication/models.py](authentication/models.py) | Profile và cờ bắt buộc đổi mật khẩu |
+| [authentication/signals.py](authentication/signals.py) | Tự tạo profile khi có User mới |
+| [authentication/apps.py](authentication/apps.py) | Đăng ký signal qua `ready()` |
+| [authentication/views.py](authentication/views.py) | CSRF, login, session, đổi mật khẩu, logout |
+| [authentication/middleware.py](authentication/middleware.py) | Chặn nghiệp vụ khi chưa đăng nhập/chưa đổi mật khẩu |
+| [booking/models.py](booking/models.py) | `RoomType`, `Booking`, `BookingEvent` |
+| [booking/services.py](booking/services.py) | Validation, tính tồn và chuyển trạng thái |
+| [booking/views.py](booking/views.py) | Đọc JSON, gọi service và trả JSON |
+| [booking/urls.py](booking/urls.py) | Định tuyến API nghiệp vụ |
+| [booking/admin.py](booking/admin.py) | Đăng ký model để xem trong Admin |
+| [booking/tests.py](booking/tests.py) | Kiểm tra luồng, tồn phòng, lỗi và quyền truy cập |
+| [seed_demo.py](booking/management/commands/seed_demo.py) | Tạo dữ liệu thử mà không ghi đè dữ liệu cũ |
+
+Luồng xử lý cần nhớ:
+
+```text
+Frontend gửi HTTP → urls.py → views.py → services.py → models.py/SQLite
+Frontend nhận JSON ← views.py ← kết quả xử lý nghiệp vụ
+```
+
+View không chứa toàn bộ nghiệp vụ. Service không quyết định cách vẽ giao diện.
+
+## 3. Phần chuẩn bị — xác thực
+
+1. Quản trị viên tạo User nhân viên bằng Admin hoặc `User.objects.create_user()`.
+2. Signal tự tạo `EmployeeProfile(must_change_password=True)`.
+3. Frontend gọi `GET /api/csrf/`, sau đó `POST /api/login/`.
+4. Backend tạo session và trả `username`, `display_name`, `must_change_password`.
+5. Nhân viên gọi `POST /api/change-password/` để bỏ cờ bắt buộc đổi.
+6. Các API `/api/booking/` mới cho phép sử dụng.
+
+Superuser mới nhận cờ bằng false. Mật khẩu mới hiện chỉ được kiểm tra không rỗng
+và khớp xác nhận theo yêu cầu dự án. Dùng `set_password()` để băm mật khẩu;
+không gán mật khẩu trực tiếp vào `user.password`.
+
+Session cookie xác nhận tài khoản; CSRF bảo vệ POST; CORS cho phép origin
+Frontend đọc response. Không tắt CSRF để xử lý lỗi tích hợp.
+
+## 4. Thực hiện 8 bước nghiệp vụ trong code
+
+### B1. Tiếp nhận yêu cầu
+
+- Model: `Booking` lưu khách, liên hệ, ngày giờ đến, ngày đi, phòng, giá, đảm bảo,
+  thanh toán và yêu cầu đặc biệt.
+- API: `POST /api/booking/bookings/`.
+- View `bookings()` đọc JSON rồi gọi `create_booking()`.
+- `booking_fields()` kiểm tra trường nhập, khoảng ngày, giá và sức chứa.
+- Backend gắn `created_by` từ session, tạo trạng thái `pending`, ghi lịch sử.
+
+Không nhận trạng thái hoặc ID nhân viên tự đặt từ Frontend.
+
+### B2. Kiểm tra khả năng đáp ứng
+
+- API: `GET /api/booking/availability/?check_in=...&check_out=...`.
+- Service: `available_rooms()`.
+- Tính từng đêm, trừ số lượng phòng của các phiếu `confirmed`.
+- Ngày trả không chiếm phòng, nên trả ngày 03 và nhận ngày 03 không xung đột.
+
+Kết quả kiểm tra chỉ là tồn tại thời điểm gọi, chưa giữ phòng cho khách.
+
+### B3. Thỏa thuận hoặc chờ/từ chối
+
+Dùng `POST /api/booking/bookings/<id>/actions/` và `process_booking()`:
+
+- `agree`: khách đồng ý phương án, chuyển sang `agreed`.
+- `wait`: đưa vào `waiting`.
+- `reject`: chuyển sang `rejected`.
+- Nếu khách đổi ngày/loại phòng, dùng `edit` để lưu phương án mới rồi kiểm tra lại.
+
+Service quyết định chuyển trạng thái hợp lệ; Frontend chỉ gửi hành động.
+
+### B4. Nhập và lưu phiếu thỏa thuận
+
+Dữ liệu đã lưu sớm từ B1 để không mất yêu cầu. Khi nhận `agree`, Backend cập nhật
+phiếu hiện có thành `agreed` và ghi lịch sử, không tạo bản sao.
+
+Giá thỏa thuận, thanh toán và yêu cầu đặc biệt được sửa bằng hành động `edit`.
+Mã phiếu có dạng `DP00001`.
+
+### B5. Khẳng định đặt phòng với khách
+
+- Nhân viên liên hệ khách rồi gửi `action=confirm`, kênh liên hệ và ghi chú.
+- Backend chỉ nhận confirm từ trạng thái `agreed`.
+- Trong transaction, Backend kiểm tra lại tồn trước khi lưu `confirmed`.
+- Không đủ phòng: trả `409 / NO_AVAILABILITY`, không làm mất phiếu cũ.
+- Phiếu confirmed bắt đầu chiếm phòng; gửi confirm lần nữa không chiếm thêm.
+
+Demo chỉ ghi nhận việc nhân viên đã liên hệ, chưa tự gửi email hoặc gọi điện.
+
+### B6. Lưu và tra cứu hồ sơ
+
+- `GET /api/booking/bookings/`: sắp ngày đến rồi tên khách, hỗ trợ q và status.
+- `GET /api/booking/bookings/<id>/`: thông tin chi tiết và lịch sử.
+- `booking_data()` chuyển model thành dữ liệu JSON.
+- `BookingEvent` lưu nhân viên, thời gian và nội dung xử lý.
+
+B6 sử dụng dữ liệu đã được lưu xuyên suốt; không cần một bảng hồ sơ trùng phiếu.
+
+### B7. Nhận khẳng định lại, sửa hoặc hủy
+
+- `reconfirm`: ghi thời điểm khách khẳng định lại phiếu confirmed.
+- `edit`: gửi đầy đủ dữ liệu phiếu, kiểm tra tồn lại nếu phiếu đã confirmed.
+- Sửa thành công sẽ xóa mốc khẳng định lại và ghi rõ trường thay đổi trong lịch sử.
+- `cancel`: yêu cầu ghi chú người yêu cầu/lý do, đổi thành cancelled và giải phóng phòng.
+- Phiếu cancelled hoặc rejected không sửa tiếp.
+
+Không xóa phiếu để hủy. Khi sửa thất bại, transaction giữ nguyên dữ liệu cũ.
+
+### B8. Tổng hợp và bàn giao lễ tân
+
+- API: `GET /api/booking/handover/?date=YYYY-MM-DD`.
+- View: `handover()`.
+- Trả khách dự kiến đến/đi, số phòng dự kiến sử dụng và số phiếu chờ.
+- Chỉ phiếu confirmed xuất hiện trong danh sách đến/đi.
+
+Chưa xử lý check-in/check-out thực tế, no-show, ở thêm và đi sớm.
+
+## 5. Thứ tự tự làm lại hoặc sửa một chức năng
+
+1. Chọn một bước nghiệp vụ nhỏ và thống nhất API với Frontend.
+2. Xem model đã có đủ dữ liệu chưa; nếu đổi model, tạo migration mới.
+3. Viết validation và quy tắc trong `services.py`.
+4. Viết view nhận JSON/gọi service/trả JSON.
+5. Thêm đường dẫn trong `urls.py`.
+6. Viết test trường hợp đúng, dữ liệu sai và trạng thái không hợp lệ.
+7. Cập nhật API contract và bàn giao dữ liệu mẫu cho Frontend.
+
+Ví dụ “Khách đồng ý” đi theo:
+`app.js/runAction()` → `booking_action()` → `process_booking()`
+→ lưu `Booking` và `BookingEvent` → JSON → Frontend cập nhật chi tiết.
+
+## 6. Kiểm tra trước khi bàn giao
+
+Chạy tại thư mục `backend`:
 
 ```powershell
 .\venv\Scripts\python.exe manage.py check
@@ -182,22 +181,17 @@ Kiểm tra trước khi commit:
 .\venv\Scripts\python.exe manage.py test
 ```
 
-## 11. Khi phối hợp với Frontend
+Bàn giao endpoint, request/response, mã lỗi, migration và dữ liệu thử. Khi lỗi tích
+hợp, cùng Frontend xem URL/method/status/response trong Network; không đoán theo
+thông báo giao diện.
 
-Khi có lỗi tích hợp, kiểm tra URL, HTTP method, request body, status và response
-trong Network của trình duyệt. Sau đó kiểm tra lần lượt origin CORS/CSRF,
-`credentials: "include"`, header `X-CSRFToken` cho POST và session cookie.
+## 7. Phạm vi và tài liệu tiếp theo
 
-Trước khi bàn giao, Backend cần chạy migration, tạo tài khoản nhân viên thử (profile
-được tạo tự động), chạy toàn bộ kiểm thử và thông báo cho Frontend nếu API contract
-thay đổi.
+Bản demo dùng chung quyền thao tác cho nhân viên đã đổi mật khẩu, một loại phòng
+mỗi phiếu, chưa thu tiền, chưa quản lý từng số phòng hay chính sách giữ phòng tự động.
 
-## 12. Tài liệu liên quan
-
-- [`frontend/README.md`](../frontend/README.md): công việc Frontend từ xác thực đến đặt phòng.
-- [`api_contract.md`](../docs/api_contract.md): request/response chính thức.
-- [`backend_guide.md`](../docs/backend_guide.md): kế hoạch triển khai nghiệp vụ Backend.
-- [`git_workflow.md`](../docs/git_workflow.md): quy tắc nhánh, commit và phối hợp Git.
-- [`huong_dan_chay_du_an.md`](../docs/huong_dan_chay_du_an.md): cách cài và chạy dự án.
-- [`next_steps_after_auth.md`](../docs/next_steps_after_auth.md): mốc phối hợp chung sau xác thực.
-
+- [Demo walkthrough](../docs/demo_walkthrough.md): sơ đồ, kịch bản thử và giới hạn.
+- [API contract](../docs/api_contract.md): nguồn request/response chính thức.
+- [Backend guide](../docs/backend_guide.md): kế hoạch nâng cấp sau demo.
+- [Frontend README](../frontend/README.md): giao diện tương ứng với từng bước.
+- [Git workflow](../docs/git_workflow.md): phối hợp mã nguồn.

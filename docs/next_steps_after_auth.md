@@ -1,5 +1,10 @@
 # Kế hoạch phối hợp sau xác thực
 
+**Hiện trạng:** đã có bản demo xuyên suốt 8 bước ở mức giản lược. Xem
+[sơ đồ và kịch bản demo](demo_walkthrough.md) và [API contract](api_contract.md).
+Các giai đoạn bên dưới là kế hoạch nâng cấp từ demo, bao gồm phân quyền và quản lý
+phòng chi tiết; không phải danh sách chức năng đều còn trống.
+
 Kế hoạch này dựa trên
 [tài liệu quy trình đặt phòng](reference/quy-trinh-dat-phong.pdf). File này chỉ
 quy định thứ tự phối hợp và kết quả bàn giao chung, không lặp hướng dẫn kỹ thuật:

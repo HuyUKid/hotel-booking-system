@@ -29,12 +29,17 @@ cd backend
 python -m venv venv
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 .\venv\Scripts\python.exe manage.py migrate
+.\venv\Scripts\python.exe manage.py seed_demo
 .\venv\Scripts\python.exe manage.py createsuperuser
 ```
 
 `createsuperuser` tạo tài khoản quản trị không bắt buộc đổi mật khẩu. Khi tạo một
 User nhân viên trong Django Admin hoặc bằng `User.objects.create_user()`, Backend
 tự tạo `EmployeeProfile` và yêu cầu nhân viên đổi mật khẩu ở lần đăng nhập đầu.
+
+`seed_demo` tạo 2 loại phòng và tài khoản **demo / demo123** để thử ứng dụng. Lần đầu
+đăng nhập phải đổi mật khẩu. Chạy lại lệnh không xóa phiếu, không ghi đè tài khoản
+hay mật khẩu đã tồn tại. `createsuperuser` chỉ cần nếu bạn muốn vào Django Admin.
 
 ## Chạy cả Backend và Frontend
 
@@ -91,4 +96,19 @@ Thực hiện lần lượt trên trình duyệt:
 
 Khi có lỗi, mở Developer Tools → Network và ghi lại URL, method, HTTP status cùng
 response. Đối chiếu request/response với [`api_contract.md`](api_contract.md).
+
+Sau phần xác thực, thử toàn bộ đặt phòng theo
+[sơ đồ và kịch bản demo](demo_walkthrough.md).
+
+## Kiểm thử trình duyệt tự động (tùy chọn)
+
+Đây là công cụ dành cho kiểm thử; không cần cài để chạy ứng dụng. Script dùng
+SQLite tạm riêng, không thay mật khẩu hoặc phiếu trong database đang dùng. Dừng
+các server local trên cổng 8000 và 5501 trước khi chạy. Từ thư mục gốc:
+
+```powershell
+.\backend\venv\Scripts\python.exe -m pip install playwright
+.\backend\venv\Scripts\python.exe -m playwright install chromium
+.\backend\venv\Scripts\python.exe -X utf8 scripts/check_demo_browser.py
+```
 

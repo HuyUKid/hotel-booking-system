@@ -1,129 +1,28 @@
-/* style.css */
-* {
-    box-sizing: border-box;
-    font-family: Arial, sans-serif;
-}
-
-body {
-    background-color: #f4f7f6;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
-
-/* Khung form căn giữa, responsive cho mobile */
-.container {
-    background: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    width: 100%;
-    max-width: 400px; /* Giới hạn độ rộng trên PC, tự co lại trên Mobile */
-}
-
-h2 {
-    text-align: center;
-    color: #333;
-}
-
-/* Label và Input theo chuẩn */
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #555;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-/* Nút bấm và Trạng thái khóa (Loading) */
-button {
-    width: 100%;
-    padding: 10px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-button:disabled {
-    background-color: #a0c4ff;
-    cursor: not-allowed;
-}
-
-/* Thông báo lỗi */
-.error-msg {
-    color: #dc3545;
-    font-size: 14px;
-    margin-bottom: 15px;
-    text-align: center;
-}
-/* --- Thêm vào cuối file style.css --- */
-.dashboard {
-    display: flex;
-    height: 100vh;
-    width: 100vw;
-    background-color: #f4f7f6;
-}
-
-/* Thanh menu (Sidebar) */
-.sidebar {
-    width: 250px;
-    background-color: #2c3e50;
-    color: white;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar h3 { margin-top: 0; text-align: center; }
-.sidebar a {
-    color: #ecf0f1;
-    text-decoration: none;
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 4px;
-    display: none; /* Ẩn đi, chỉ hiện dựa vào phân quyền role */
-}
-.sidebar a:hover { background-color: #34495e; }
-.sidebar a.active { background-color: #3498db; }
-
-/* Khu vực nội dung chính (Main Content) */
-.main-content {
-    flex-grow: 1;
-    padding: 20px;
-    overflow-y: auto;
-}
-
-/* Header (Tên nhân viên & Nút đăng xuất) */
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-}
-
-.header button { width: auto; padding: 8px 15px; background-color: #dc3545; }
-.header button:hover { background-color: #c82333; }
-
-/* Bảng Mock Data */
-.result-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-.result-table th, .result-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-.result-table th { background-color: #007bff; color: white; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #f5f6f8; color: #243141; font: 15px/1.6 Arial, sans-serif; }
+[hidden] { display: none !important; }
+header { background: white; border-bottom: 1px solid #ddd; padding: 18px 24px; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+header h1 { font-size: 21px; margin: 0; }
+main { max-width: 1100px; margin: 24px auto; padding: 0 18px; }
+.auth { max-width: 420px; margin: 8vh auto; }
+.card { background: white; border: 1px solid #dce1e7; border-radius: 8px; padding: 22px; margin-bottom: 20px; }
+h2 { font-size: 19px; margin-top: 0; } h3 { font-size: 16px; }
+label { display: block; margin-bottom: 12px; }
+input, select, textarea { display: block; width: 100%; padding: 9px; border: 1px solid #b9c1cc; border-radius: 4px; font: inherit; }
+textarea { min-height: 75px; }
+button, .button { display: inline-block; background: #245d91; color: white; border: 0; border-radius: 4px; padding: 9px 14px; cursor: pointer; font: inherit; text-decoration: none; }
+button:disabled { opacity: .5; cursor: wait; }
+button.secondary { background: #edf0f4; color: #243141; }
+button.danger { background: #a32c37; }
+button:focus-visible, input:focus, select:focus, textarea:focus { outline: 2px solid #3789ce; outline-offset: 2px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.actions, nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.message { padding: 12px; border-radius: 4px; margin: 12px 0; white-space: pre-wrap; }
+.error { background: #fff0f0; color: #8b2030; } .success { background: #eaf5ef; color: #245b3d; }
+.muted { color: #5f6c7a; } .table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; } th, td { text-align: left; border-bottom: 1px solid #e1e5eb; padding: 10px; vertical-align: top; }
+th { background: #f5f6f8; } td button { white-space: nowrap; }
+.flow { display: grid; grid-template-columns: repeat(4, 1fr); padding-left: 22px; gap: 12px 24px; }
+.history { border-left: 3px solid #ccd6e2; padding-left: 16px; }
+@media (max-width: 650px) { .grid { grid-template-columns: 1fr; } .flow { grid-template-columns: repeat(2, 1fr); } header { align-items: flex-start; flex-direction: column; } .card { padding: 16px; } }
+@media print { header, nav, button, #workflow, #message, #filters { display: none !important; } main { max-width: none; } .card { border: 0; } }

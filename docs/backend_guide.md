@@ -1,5 +1,11 @@
 # Kế hoạch phát triển Backend sau xác thực
 
+**Cập nhật bản demo:** app `booking` hiện đã có các file đơn `models.py`,
+`services.py`, `views.py`, `urls.py`, `tests.py` và lệnh `seed_demo`. Đọc
+[demo_walkthrough.md](demo_walkthrough.md) để học code đang chạy. Tài liệu bên dưới
+là kế hoạch mở rộng; cấu trúc package, role và endpoint đề xuất chưa phải tất cả
+đã được triển khai. Endpoint thực tế chỉ lấy từ [API contract](api_contract.md).
+
 Tài liệu này chỉ mô tả công việc của Backend. Công việc Frontend nằm trong
 [`frontend/README.md`](../frontend/README.md); thứ tự phối hợp và mốc bàn giao
 chung nằm trong [`next_steps_after_auth.md`](next_steps_after_auth.md).
